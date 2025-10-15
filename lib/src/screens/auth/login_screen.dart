@@ -5,6 +5,10 @@ import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../user/user_home.dart';
 import 'register_screen.dart';
+import '../owner/owner_home.dart';
+import '../owner/waiting_approval_screen.dart';
+
+
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
