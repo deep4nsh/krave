@@ -24,14 +24,15 @@ class WaitingApprovalScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: () async {
+              onPressed: () {
                 // Optional: sign out user and go to login
-                await auth.signOut();
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                      (route) => false,
-                );
+                auth.signOut().whenComplete(() {
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    (route) => false,
+                  );
+                });
               },
               child: const Text('Logout'),
             ),

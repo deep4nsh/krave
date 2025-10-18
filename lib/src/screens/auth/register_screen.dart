@@ -8,7 +8,7 @@ import '../auth/login_screen.dart';
 import '../owner/waiting_approval_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({Key? key}) : super(key: key);
+  const RegisterScreen({super.key});
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
@@ -51,8 +51,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 validator: (v) => (v == null || v.length < 6) ? 'Min 6 chars' : null,
               ),
               const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: role,
+DropdownButtonFormField<String>(
+                initialValue: role,
                 items: const [
                   DropdownMenuItem(value: 'user', child: Text('User')),
                   DropdownMenuItem(value: 'owner', child: Text('Owner')),
@@ -85,9 +85,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     // 3) If role == owner -> create Owners/{uid} with approved:false
                     if (role == 'owner') {
                       await fs.addOwner(uid, name, email);
-                      // Option A: Immediately sign out and show waiting screen:
-                      // await auth.logout(); // optional: sign out so they must login again
-                      // Navigate to WaitingApproval screen (owners must wait)
+                      if (!mounted) return;
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(builder: (_) => const WaitingApprovalScreen()),
@@ -96,14 +94,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     }
 
                     // Non-owner flow: navigate to login
+                    if (!mounted) return;
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(builder: (_) => const LoginScreen()),
                     );
                   } catch (e) {
+                    if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
                   } finally {
-                    setState(() => loading = false);
+                    if (mounted) setState(() => loading = false);
                   }
                 },
                 child: const Text('Register'),

@@ -42,6 +42,7 @@ class _OwnerHomeState extends State<OwnerHome> {
 
   Future<void> _logout() async {
     await AuthService().logout();
+    if (!mounted) return;
     Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginScreen()), (route) => false);
   }
 

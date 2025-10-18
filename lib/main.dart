@@ -21,10 +21,11 @@ void main() async {
 }
 
 class KraveApp extends StatelessWidget {
-  const KraveApp({Key? key}) : super(key: key);
+  const KraveApp({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = ColorScheme.fromSeed(seedColor: Colors.deepOrange);
     return MultiProvider(
       providers: [
         Provider<AuthService>(create: (_) => AuthService()),
@@ -32,7 +33,27 @@ class KraveApp extends StatelessWidget {
       ],
       child: MaterialApp(
         title: 'Krave',
-        theme: ThemeData(primarySwatch: Colors.deepOrange),
+        theme: ThemeData(
+          useMaterial3: true,
+          colorScheme: colorScheme,
+          appBarTheme: AppBarTheme(
+            backgroundColor: colorScheme.surface,
+            foregroundColor: colorScheme.onSurface,
+            elevation: 0,
+            centerTitle: true,
+          ),
+          inputDecorationTheme: const InputDecorationTheme(
+            border: OutlineInputBorder(),
+          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(44), shape: const StadiumBorder()),
+          ),
+          snackBarTheme: SnackBarThemeData(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: colorScheme.primary,
+            contentTextStyle: TextStyle(color: colorScheme.onPrimary),
+          ),
+        ),
         home: const Root(),
         routes: {
           '/login': (_) => const LoginScreen(),
@@ -44,7 +65,7 @@ class KraveApp extends StatelessWidget {
 }
 
 class Root extends StatelessWidget {
-  const Root({Key? key}) : super(key: key);
+  const Root({super.key});
 
   Future<Widget> _decideStart(BuildContext context) async {
     final auth = Provider.of<AuthService>(context, listen: false);

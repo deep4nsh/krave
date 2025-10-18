@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:krave/src/screens/auth/user_signup.dart';
 import '../auth/login_screen.dart';
-import '../auth/user_signup.dart'; // 👈 import user signup screen
+import '../auth/user_signup.dart';
 
 class OwnerSignupScreen extends StatefulWidget {
   const OwnerSignupScreen({Key? key}) : super(key: key);
@@ -36,6 +35,7 @@ class _OwnerSignupScreenState extends State<OwnerSignupScreen> {
         'approved': false,
       });
 
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Signup successful! Waiting for admin approval.')),
       );
@@ -45,6 +45,7 @@ class _OwnerSignupScreenState extends State<OwnerSignupScreen> {
         MaterialPageRoute(builder: (_) => const LoginScreen()),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
       );

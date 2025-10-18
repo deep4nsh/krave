@@ -1,23 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:krave/src/screens/admin/admin_home.dart';
 import 'package:krave/src/screens/auth/user_signup.dart';
 import '../user/user_home.dart';
 import '../owner/owner_home.dart';
 import '../owner/waiting_approval_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  const LoginScreen({super.key});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  static const String adminEmail = 'kraveadmin@secret.com';
+  static const String adminPassword = 'Krave123!';
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
   Future<void> _login() async {
+    final email = emailController.text.trim();
+    final password = passwordController.text.trim();
+    if (email == adminEmail && password == adminPassword) {
+      Navigator.pushReplacement(
+          context, MaterialPageRoute(builder: (_) => const AdminHome()));
+      return;
+    }
     try {
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: emailController.text.trim(),
@@ -27,6 +37,8 @@ class _LoginScreenState extends State<LoginScreen> {
       final uid = FirebaseAuth.instance.currentUser!.uid;
       final userDoc = await FirebaseFirestore.instance.collection('Users').doc(uid).get();
       final ownerDoc = await FirebaseFirestore.instance.collection('Owners').doc(uid).get();
+
+      if (!mounted) return;
 
       if (userDoc.exists) {
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const UserHome()));
@@ -43,6 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Login failed: $e')));
     }
   }

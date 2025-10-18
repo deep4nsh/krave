@@ -27,7 +27,7 @@ class _CartScreenState extends State<CartScreen> {
     super.dispose();
   }
 
-  int get total => widget.cartItems.fold(0, (s, e) => s + (e['price'] * e['qty'] as int));
+  int get total => widget.cartItems.fold(0, (s, e) => s + ((e['price'] as int) * (e['qty'] as int)));
 
   void _onPaymentSuccess(PaymentSuccessResponse response) async {
     // save order in Firestore
@@ -52,12 +52,14 @@ class _CartScreenState extends State<CartScreen> {
     );
     await pdfSrv.sharePdf(bytes, 'krave_bill_$orderId.pdf');
 
+    if (!mounted) return;
     setState(() { processing = false; });
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Order placed')));
     Navigator.popUntil(context, (route) => route.isFirst);
   }
 
   void _onPaymentError(PaymentFailureResponse r) {
+    if (!mounted) return;
     setState(() { processing = false; });
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Payment failed')));
   }
@@ -94,7 +96,7 @@ class _CartScreenState extends State<CartScreen> {
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(children: [
-              Text('Total: ₹$total', style: const TextStyle(fontSize: 18)),
+Text('Total: ₹$total', style: const TextStyle(fontSize: 18)),
               const SizedBox(height: 8),
               ElevatedButton(onPressed: checkout, child: const Text('Pay & Place Order')),
             ]),

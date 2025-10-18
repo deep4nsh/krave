@@ -32,6 +32,7 @@ class _UserSignupScreenState extends State<UserSignupScreen> {
         'role': 'user',
       });
 
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Signup successful!')),
       );
@@ -41,6 +42,7 @@ class _UserSignupScreenState extends State<UserSignupScreen> {
         MaterialPageRoute(builder: (_) => const LoginScreen()),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error: $e')),
       );

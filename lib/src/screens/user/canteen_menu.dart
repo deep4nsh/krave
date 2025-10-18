@@ -50,10 +50,13 @@ class _CanteenMenuState extends State<CanteenMenu> {
             itemCount: items.length,
             itemBuilder: (context, i) {
               final it = items[i];
-              return ListTile(
-                title: Text(it.name),
-                subtitle: Text('₹${it.price}'),
-                trailing: ElevatedButton(onPressed: () => addToCart(it), child: const Text('Add')),
+              return Card(
+                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                child: ListTile(
+                  title: Text(it.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: Text('₹${it.price}'),
+                  trailing: ElevatedButton(onPressed: () => addToCart(it), child: const Text('Add')),
+                ),
               );
             },
           );
