@@ -1,4 +1,3 @@
-// lib/screens/owner/owner_home.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -6,6 +5,7 @@ import '../../services/firestore_service.dart';
 import '../../models/order_model.dart';
 import '../../services/auth_service.dart';
 import '../auth/login_screen.dart';
+import '../owner/waiting_approval_screen.dart'; // 👈 Make sure you have this
 
 class OwnerHome extends StatefulWidget {
   const OwnerHome({Key? key}) : super(key: key);
@@ -16,43 +16,70 @@ class OwnerHome extends StatefulWidget {
 
 class _OwnerHomeState extends State<OwnerHome> {
   String? canteenId;
+  String? ownerStatus;
   bool loading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadOwnerData();
+    _checkOwnerStatus();
   }
 
-  Future<void> _loadOwnerData() async {
+  Future<void> _checkOwnerStatus() async {
     final auth = FirebaseAuth.instance;
     final uid = auth.currentUser?.uid;
+
     if (uid == null) {
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
       return;
     }
-    final fs = Provider.of<FirestoreService>(context, listen: false);
-    // Option 1: if you stored canteenId in Users doc
-    final user = await fs.getUser(uid);
+
+    final firestore = FirestoreService();
+    final ownerDoc = await firestore.getOwnerDoc(uid); // 👈 We'll add this function below
+
+    if (ownerDoc == null) {
+      if (!mounted) return;
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const WaitingApprovalScreen()));
+      return;
+    }
+
     setState(() {
-      canteenId = user?.canteenId; // may be null if owner not assigned a canteen yet
+      ownerStatus = ownerDoc['status'];
+      canteenId = ownerDoc['canteen_id']; // optional if stored
       loading = false;
     });
+
+    // 🚫 If still pending or rejected, redirect to waiting/denied screen
+    if (ownerStatus == 'pending' || ownerStatus == 'rejected') {
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const WaitingApprovalScreen()),
+      );
+    }
   }
 
   Future<void> _logout() async {
     await AuthService().logout();
     if (!mounted) return;
-    Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginScreen()), (route) => false);
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (route) => false,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final fs = Provider.of<FirestoreService>(context, listen: false);
 
+    if (loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Krave - Owner'),
+        title: const Text('Krave - Owner Dashboard'),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -61,34 +88,20 @@ class _OwnerHomeState extends State<OwnerHome> {
           ),
         ],
       ),
-      body: loading
-          ? const Center(child: CircularProgressIndicator())
-          : canteenId == null
-          ? Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('No canteen assigned to your account yet.'),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: () {
-                // If you have Manage Canteen flow, navigate there
-              },
-              child: const Text('Request Canteen / Contact Admin'),
-            ),
-          ],
-        ),
-      )
+      body: canteenId == null
+          ? const Center(child: Text('No canteen assigned yet. Contact Admin.'))
           : StreamBuilder<List<OrderModel>>(
         stream: fs.streamOrdersForCanteen(canteenId!),
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
+
           final orders = snap.data ?? [];
           if (orders.isEmpty) {
             return const Center(child: Text('No orders yet.'));
           }
+
           return ListView.builder(
             itemCount: orders.length,
             itemBuilder: (context, i) {
@@ -103,13 +116,15 @@ class _OwnerHomeState extends State<OwnerHome> {
                     onSelected: (value) async {
                       if (value == 'Pending' || value == 'Ready' || value == 'Completed') {
                         await fs.updateOrderStatus(o.id, value);
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Order ${o.id} set to $value')));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Order ${o.id} set to $value')),
+                        );
                       }
                     },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(value: 'Pending', child: Text('Set Pending')),
-                      const PopupMenuItem(value: 'Ready', child: Text('Set Ready')),
-                      const PopupMenuItem(value: 'Completed', child: Text('Set Completed')),
+                    itemBuilder: (context) => const [
+                      PopupMenuItem(value: 'Pending', child: Text('Set Pending')),
+                      PopupMenuItem(value: 'Ready', child: Text('Set Ready')),
+                      PopupMenuItem(value: 'Completed', child: Text('Set Completed')),
                     ],
                   ),
                 ),
@@ -121,7 +136,7 @@ class _OwnerHomeState extends State<OwnerHome> {
       floatingActionButton: FloatingActionButton(
         child: const Icon(Icons.menu_book),
         onPressed: () {
-          // Navigate to Manage Menu screen if you have it
+          // Add manage menu navigation here
         },
       ),
     );

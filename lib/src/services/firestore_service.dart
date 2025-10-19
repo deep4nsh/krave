@@ -120,5 +120,21 @@ class FirestoreService {
   Future<void> rejectOwner(String uid) async {
     await _db.collection('Owners').doc(uid).delete();
   }
+  // Check if admin credentials are valid
+  Future<bool> verifyAdminCredentials(String email, String password) async {
+    final snapshot = await _db
+        .collection('Admins')
+        .where('email', isEqualTo: email)
+        .where('password', isEqualTo: password)
+        .limit(1)
+        .get();
+
+    return snapshot.docs.isNotEmpty;
+  }
+  Future<Map<String, dynamic>?> getOwnerDoc(String uid) async {
+    final doc = await _db.collection('Owners').doc(uid).get();
+    if (!doc.exists) return null;
+    return doc.data();
+  }
 
 }

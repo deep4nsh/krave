@@ -1,230 +1,115 @@
-// lib/screens/admin/admin_home.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../services/firestore_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../auth/login_screen.dart';
 
-class AdminHome extends StatelessWidget {
-  const AdminHome({Key? key}) : super(key: key);
+class AdminHome extends StatefulWidget {
+  const AdminHome({super.key});
 
-  void _logout(BuildContext context) {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-    );
+  @override
+  State<AdminHome> createState() => _AdminHomeState();
+}
+
+class _AdminHomeState extends State<AdminHome> {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  Stream<QuerySnapshot> _pendingOwners() {
+    // Listen for all owners with status == "pending"
+    return _firestore
+        .collection('Owners')
+        .where('status', isEqualTo: 'pending')
+        .snapshots();
+  }
+
+  Future<void> _approveOwner(String ownerId) async {
+    await _firestore.collection('Owners').doc(ownerId).update({
+      'status': 'approved',
+      'approvedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> _rejectOwner(String ownerId) async {
+    await _firestore.collection('Owners').doc(ownerId).update({
+      'status': 'rejected',
+      'rejectedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> _logout() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      if (!mounted) return;
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+            (route) => false,
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Logout failed: $e')));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final fs = FirestoreService();
-
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Admin Dashboard'),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.logout),
-              tooltip: 'Logout',
-              onPressed: () => _logout(context),
-            ),
-          ],
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'Pending Owners'),
-              Tab(text: 'Canteens'),
-              Tab(text: 'Orders'),
-            ],
-          ),
-        ),
-
-        body: TabBarView(
-          children: [
-            // =================== PENDING OWNERS ===================
-            StreamBuilder<QuerySnapshot>(
-              stream: fs.streamPendingOwners(), // from FirestoreService
-              builder: (context, snap) {
-                if (snap.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (!snap.hasData || snap.data!.docs.isEmpty) {
-                  return const Center(child: Text('✅ No pending owners.'));
-                }
-
-                final docs = snap.data!.docs;
-                return ListView.builder(
-                  itemCount: docs.length,
-                  itemBuilder: (context, i) {
-                    final owner = docs[i];
-                    final ownerName = owner['name'] ?? 'Unknown';
-                    final ownerEmail = owner['email'] ?? 'N/A';
-
-                    return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      child: ListTile(
-                        title: Text(ownerName),
-                        subtitle: Text(ownerEmail),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.check, color: Colors.green),
-                              tooltip: 'Approve',
-                              onPressed: () async {
-                                final confirm = await _confirmAction(
-                                  context,
-                                  'Approve $ownerName?',
-                                  'This will mark this owner as approved.',
-                                );
-                                if (confirm == true) {
-                                  await fs.approveOwner(owner.id);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('$ownerName approved ✅')),
-                                  );
-                                }
-                              },
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.close, color: Colors.red),
-                              tooltip: 'Reject',
-                              onPressed: () async {
-                                final confirm = await _confirmAction(
-                                  context,
-                                  'Reject $ownerName?',
-                                  'This will permanently remove this owner.',
-                                );
-                                if (confirm == true) {
-                                  await fs.rejectOwner(owner.id);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('$ownerName rejected ❌')),
-                                  );
-                                }
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-
-            // =================== CANTEENS TAB ===================
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection('Canteens').snapshots(),
-              builder: (context, snap) {
-                if (snap.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (!snap.hasData || snap.data!.docs.isEmpty) {
-                  return const Center(child: Text('No canteens available.'));
-                }
-
-                final docs = snap.data!.docs;
-                return ListView.builder(
-                  itemCount: docs.length,
-                  itemBuilder: (context, i) {
-                    final canteen = docs[i];
-                    final name = canteen['canteen_name'] ?? 'Unnamed';
-                    final ownerId = canteen['ownerId'] ?? 'Unknown';
-
-                    return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      child: ListTile(
-                        title: Text(name),
-                        subtitle: Text('Owner ID: $ownerId'),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () async {
-                            final confirm = await _confirmAction(
-                              context,
-                              'Delete Canteen?',
-                              'This will remove "$name" from database.',
-                            );
-                            if (confirm == true) {
-                              await canteen.reference.delete();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Canteen "$name" deleted 🗑️')),
-                              );
-                            }
-                          },
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-
-            // =================== ORDERS TAB ===================
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('Orders')
-                  .orderBy('timestamp', descending: true)
-                  .snapshots(),
-              builder: (context, snap) {
-                if (snap.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (!snap.hasData || snap.data!.docs.isEmpty) {
-                  return const Center(child: Text('No orders found.'));
-                }
-
-                final docs = snap.data!.docs;
-                return ListView.builder(
-                  itemCount: docs.length,
-                  itemBuilder: (context, i) {
-                    final order = docs[i];
-                    final token = order['tokenNumber'] ?? 'N/A';
-                    final user = order['userId'] ?? 'Unknown';
-                    final canteen = order['canteenId'] ?? 'Unknown';
-                    final status = order['status'] ?? 'Pending';
-                    final total = order['totalAmount'] ?? 0;
-
-                    return Card(
-                      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      child: ListTile(
-                        title: Text('Order #$token - $status'),
-                        subtitle: Text('User: $user\nCanteen: $canteen\nTotal: ₹$total'),
-                        trailing: PopupMenuButton<String>(
-                          onSelected: (val) {
-                            FirebaseFirestore.instance
-                                .collection('Orders')
-                                .doc(order.id)
-                                .update({'status': val});
-                          },
-                          itemBuilder: (context) => const [
-                            PopupMenuItem(value: 'Pending', child: Text('Pending')),
-                            PopupMenuItem(value: 'Completed', child: Text('Completed')),
-                            PopupMenuItem(value: 'Cancelled', child: Text('Cancelled')),
-                          ],
-                          child: const Icon(Icons.more_vert),
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Confirmation dialog helper
-  Future<bool?> _confirmAction(BuildContext context, String title, String content) async {
-    return showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text(title),
-        content: Text(content),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Admin Dashboard'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Confirm')),
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.red),
+            tooltip: 'Logout',
+            onPressed: _logout,
+          ),
         ],
+      ),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: _pendingOwners(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text('No pending approval requests.'));
+          }
+
+          final owners = snapshot.data!.docs;
+
+          return ListView.builder(
+            itemCount: owners.length,
+            itemBuilder: (context, index) {
+              final data = owners[index].data() as Map<String, dynamic>;
+              return Card(
+                margin: const EdgeInsets.all(8),
+                child: ListTile(
+                  leading: const Icon(Icons.storefront, color: Colors.deepOrange),
+                  title: Text(data['name'] ?? 'Unnamed Owner'),
+                  subtitle: Text(data['email'] ?? ''),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.check_circle, color: Colors.green),
+                        tooltip: 'Approve Owner',
+                        onPressed: () => _approveOwner(owners[index].id),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.cancel, color: Colors.red),
+                        tooltip: 'Reject Owner',
+                        onPressed: () => _rejectOwner(owners[index].id),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
       ),
     );
   }
