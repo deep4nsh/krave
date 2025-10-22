@@ -8,7 +8,7 @@ import '../auth/login_screen.dart';
 import '../owner/waiting_approval_screen.dart'; // 👈 Make sure you have this
 
 class OwnerHome extends StatefulWidget {
-  const OwnerHome({Key? key}) : super(key: key);
+  const OwnerHome({super.key});
 
   @override
   State<OwnerHome> createState() => _OwnerHomeState();
@@ -115,7 +115,8 @@ class _OwnerHomeState extends State<OwnerHome> {
                   trailing: PopupMenuButton<String>(
                     onSelected: (value) async {
                       if (value == 'Pending' || value == 'Ready' || value == 'Completed') {
-                        await fs.updateOrderStatus(o.id, value);
+                        fs.updateOrderStatus(o.id, value);
+                        if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text('Order ${o.id} set to $value')),
                         );

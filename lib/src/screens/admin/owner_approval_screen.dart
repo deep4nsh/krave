@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/firestore_service.dart';
 
 class OwnerApprovalScreen extends StatelessWidget {
-  const OwnerApprovalScreen({Key? key}) : super(key: key);
+  const OwnerApprovalScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

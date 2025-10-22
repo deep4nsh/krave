@@ -5,7 +5,7 @@ import 'package:krave/src/screens/auth/owner_signup.dart';
 import '../auth/login_screen.dart';
 
 class UserSignupScreen extends StatefulWidget {
-  const UserSignupScreen({Key? key}) : super(key: key);
+  const UserSignupScreen({super.key});
 
   @override
   State<UserSignupScreen> createState() => _UserSignupScreenState();

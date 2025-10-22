@@ -8,7 +8,7 @@ import 'cart_screen.dart';
 
 class CanteenMenu extends StatefulWidget {
   final Canteen canteen;
-  const CanteenMenu({Key? key, required this.canteen}) : super(key: key);
+  const CanteenMenu({super.key, required this.canteen});
 
   @override
   State<CanteenMenu> createState() => _CanteenMenuState();

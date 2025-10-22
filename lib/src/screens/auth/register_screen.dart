@@ -9,13 +9,14 @@ import '../owner/waiting_approval_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
+
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _form = GlobalKey<FormState>();
-  String name = '', email = '', password = '', role = 'user';
+  String name = '', email = '', password = '', role = 'user', canteenName = '';
   bool loading = false;
 
   @override
@@ -36,22 +37,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
               TextFormField(
                 decoration: const InputDecoration(labelText: 'Name'),
                 onSaved: (v) => name = v?.trim() ?? '',
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter name' : null,
+                validator: (v) =>
+                (v == null || v.trim().isEmpty) ? 'Enter name' : null,
               ),
               TextFormField(
                 decoration: const InputDecoration(labelText: 'Email'),
                 keyboardType: TextInputType.emailAddress,
                 onSaved: (v) => email = v?.trim() ?? '',
-                validator: (v) => (v == null || !v.contains('@')) ? 'Enter valid email' : null,
+                validator: (v) =>
+                (v == null || !v.contains('@')) ? 'Enter valid email' : null,
               ),
               TextFormField(
                 decoration: const InputDecoration(labelText: 'Password'),
                 obscureText: true,
                 onSaved: (v) => password = v ?? '',
-                validator: (v) => (v == null || v.length < 6) ? 'Min 6 chars' : null,
+                validator: (v) =>
+                (v == null || v.length < 6) ? 'Min 6 characters' : null,
               ),
               const SizedBox(height: 12),
-DropdownButtonFormField<String>(
+              DropdownButtonFormField<String>(
                 initialValue: role,
                 items: const [
                   DropdownMenuItem(value: 'user', child: Text('User')),
@@ -60,7 +64,21 @@ DropdownButtonFormField<String>(
                 onChanged: (v) => setState(() => role = v ?? 'user'),
                 decoration: const InputDecoration(labelText: 'Role'),
               ),
-              const SizedBox(height: 16),
+
+              // 👇 Only show this if owner is selected
+              if (role == 'owner') ...[
+                const SizedBox(height: 12),
+                TextFormField(
+                  decoration: const InputDecoration(labelText: 'Canteen Name'),
+                  onSaved: (v) => canteenName = v?.trim() ?? '',
+                  validator: (v) => (role == 'owner' &&
+                      (v == null || v.trim().isEmpty))
+                      ? 'Enter canteen name'
+                      : null,
+                ),
+              ],
+
+              const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () async {
                   if (!_form.currentState!.validate()) return;
@@ -68,40 +86,44 @@ DropdownButtonFormField<String>(
                   setState(() => loading = true);
 
                   try {
-                    // 1) Create Firebase Auth user
+                    // Step 1: Create Firebase Auth user
                     final cred = await auth.registerWithEmail(email, password);
-
-                    // 2) Create Users doc (profile)
                     final uid = cred.user!.uid;
-                    final userModel = KraveUser(
+
+                    // Step 2: Create User document
+                    final user = KraveUser(
                       id: uid,
                       name: name,
                       email: email,
                       role: role,
                       approved: role == 'user', // users auto-approved
                     );
-                    await fs.createUser(userModel);
+                    await fs.createUser(user);
 
-                    // 3) If role == owner -> create Owners/{uid} with approved:false
+                    // Step 3: Handle owner-specific logic
                     if (role == 'owner') {
-                      await fs.addOwner(uid, name, email);
-                      if (!mounted) return;
+                      await fs.addOwner(uid, name, email, canteenName);
+                      if (!context.mounted) return;
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (_) => const WaitingApprovalScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const WaitingApprovalScreen(),
+                        ),
                       );
                       return;
                     }
 
-                    // Non-owner flow: navigate to login
-                    if (!mounted) return;
+                    // Step 4: Normal user → Go to login
+                    if (!context.mounted) return;
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(builder: (_) => const LoginScreen()),
                     );
                   } catch (e) {
-                    if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error: $e')),
+                    );
                   } finally {
                     if (mounted) setState(() => loading = false);
                   }
@@ -109,8 +131,11 @@ DropdownButtonFormField<String>(
                 child: const Text('Register'),
               ),
               TextButton(
-                onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen())),
-                child: const Text('Already have account? Login'),
+                onPressed: () => Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                ),
+                child: const Text('Already have an account? Login'),
               ),
             ],
           ),

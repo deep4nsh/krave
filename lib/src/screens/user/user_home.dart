@@ -8,13 +8,13 @@ import 'canteen_menu.dart';
 import '../auth/login_screen.dart'; // 👈 Import your login screen
 
 class UserHome extends StatelessWidget {
-  const UserHome({Key? key}) : super(key: key);
+  const UserHome({super.key});
 
   // 🔹 Logout function
   Future<void> _logout(BuildContext context) async {
     try {
       await FirebaseAuth.instance.signOut();
-
+      if (!context.mounted) return;
       // Navigate to Login screen and remove all previous routes
       Navigator.pushAndRemoveUntil(
         context,
@@ -22,6 +22,7 @@ class UserHome extends StatelessWidget {
             (route) => false,
       );
     } catch (e) {
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Logout failed: $e')),
       );

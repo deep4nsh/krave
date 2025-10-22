@@ -11,7 +11,7 @@ import '../../services/pdf_service.dart';
 class CartScreen extends StatefulWidget {
   final Canteen canteen;
   final List<Map<String, dynamic>> cartItems;
-  const CartScreen({Key? key, required this.canteen, required this.cartItems}) : super(key: key);
+  const CartScreen({super.key, required this.canteen, required this.cartItems});
 
   @override
   State<CartScreen> createState() => _CartScreenState();

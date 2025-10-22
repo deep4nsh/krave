@@ -5,7 +5,7 @@ import '../auth/login_screen.dart';
 import '../auth/user_signup.dart';
 
 class OwnerSignupScreen extends StatefulWidget {
-  const OwnerSignupScreen({Key? key}) : super(key: key);
+  const OwnerSignupScreen({super.key});
 
   @override
   State<OwnerSignupScreen> createState() => _OwnerSignupScreenState();
