@@ -22,17 +22,31 @@ class _AdminHomeState extends State<AdminHome> {
   }
 
   Future<void> _approveOwner(String ownerId) async {
-    await _firestore.collection('Owners').doc(ownerId).update({
-      'status': 'approved',
-      'approvedAt': FieldValue.serverTimestamp(),
-    });
+    try {
+      await _firestore.collection('Owners').doc(ownerId).update({
+        'status': 'approved',
+        'approvedAt': FieldValue.serverTimestamp(),
+      });
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Owner approved!')));
+    } catch (e) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error approving: $e')));
+    }
   }
 
   Future<void> _rejectOwner(String ownerId) async {
-    await _firestore.collection('Owners').doc(ownerId).update({
-      'status': 'rejected',
-      'rejectedAt': FieldValue.serverTimestamp(),
-    });
+    try {
+      await _firestore.collection('Owners').doc(ownerId).update({
+        'status': 'rejected',
+        'rejectedAt': FieldValue.serverTimestamp(),
+      });
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Owner rejected.')));
+    } catch (e) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error rejecting: $e')));
+    }
   }
 
   Future<void> _logout() async {

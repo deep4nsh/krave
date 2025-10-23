@@ -27,7 +27,7 @@ class FirestoreService {
       'name': name,
       'email': email,
       'canteen_name': canteenName,
-      'status': 'pending', // 👈 waiting for admin approval
+      'status': 'pending', // waiting for admin approval
       'canteen_id': null,
       'createdAt': FieldValue.serverTimestamp(),
     });
@@ -72,7 +72,7 @@ class FirestoreService {
   Stream<List<Canteen>> streamApprovedCanteens() {
     return _db
         .collection('Canteens')
-        .where('approved', isEqualTo: true)
+        .where('status', isEqualTo: 'approved') // ✅ changed from 'approved': true
         .snapshots()
         .map((snap) => snap.docs.map((d) => Canteen.fromMap(d.id, d.data())).toList());
   }
@@ -81,6 +81,7 @@ class FirestoreService {
     await _db.collection('Canteens').doc(canteenId).update({
       'opening_time': openTime,
       'closing_time': closeTime,
+      'updatedAt': FieldValue.serverTimestamp(),
     });
   }
 
@@ -95,11 +96,17 @@ class FirestoreService {
   }
 
   Future<void> addMenuItem(String canteenId, Map<String, dynamic> itemData) async {
-    await _db.collection('Canteens').doc(canteenId).collection('MenuItems').add(itemData);
+    await _db.collection('Canteens').doc(canteenId).collection('MenuItems').add({
+      ...itemData,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
   }
 
   Future<void> updateMenuItem(String canteenId, String itemId, Map<String, dynamic> data) async {
-    await _db.collection('Canteens').doc(canteenId).collection('MenuItems').doc(itemId).update(data);
+    await _db.collection('Canteens').doc(canteenId).collection('MenuItems').doc(itemId).update({
+      ...data,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   }
 
   Future<void> deleteMenuItem(String canteenId, String itemId) async {
@@ -112,11 +119,17 @@ class FirestoreService {
   }
 
   Future<void> addInventoryItem(String canteenId, Map<String, dynamic> itemData) async {
-    await _db.collection('Canteens').doc(canteenId).collection('Inventory').add(itemData);
+    await _db.collection('Canteens').doc(canteenId).collection('Inventory').add({
+      ...itemData,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
   }
 
   Future<void> updateInventoryItem(String canteenId, String itemId, Map<String, dynamic> data) async {
-    await _db.collection('Canteens').doc(canteenId).collection('Inventory').doc(itemId).update(data);
+    await _db.collection('Canteens').doc(canteenId).collection('Inventory').doc(itemId).update({
+      ...data,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   }
 
   Future<void> deleteInventoryItem(String canteenId, String itemId) async {
@@ -133,6 +146,7 @@ class FirestoreService {
   }) async {
     final tokenNumber = await _generateTokenForCanteen(canteenId);
     final id = _uuid.v4();
+
     final data = {
       'user_uid': userId,
       'canteen_id': canteenId,
@@ -143,17 +157,20 @@ class FirestoreService {
       'paymentId': paymentId,
       'timestamp': FieldValue.serverTimestamp(),
     };
+
     await _db.collection('Orders').doc(id).set(data);
     return id;
   }
 
   Future<String> _generateTokenForCanteen(String canteenId) async {
     final todayStart = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+
     final snapshots = await _db
         .collection('Orders')
         .where('canteen_id', isEqualTo: canteenId)
         .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(todayStart))
         .get();
+
     final token = snapshots.docs.length + 1;
     return token.toString();
   }
@@ -174,6 +191,9 @@ class FirestoreService {
   }
 
   Future<void> updateOrderStatus(String orderId, String status) async {
-    await _db.collection('Orders').doc(orderId).update({'status': status});
+    await _db.collection('Orders').doc(orderId).update({
+      'status': status,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   }
 }
