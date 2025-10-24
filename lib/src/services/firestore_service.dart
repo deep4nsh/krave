@@ -97,6 +97,8 @@ class FirestoreService {
 
   Future<void> addMenuItem(String canteenId, Map<String, dynamic> itemData) async {
     await _db.collection('Canteens').doc(canteenId).collection('MenuItems').add({
+      'available': itemData['available'] ?? true,
+      'imageUrl': itemData['imageUrl'] ?? null,
       ...itemData,
       'createdAt': FieldValue.serverTimestamp(),
     });

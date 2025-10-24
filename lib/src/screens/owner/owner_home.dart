@@ -1,5 +1,8 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/firestore_service.dart';
@@ -26,6 +29,7 @@ class _OwnerHomeState extends State<OwnerHome> {
     _checkOwnerStatus();
   }
 
+  // ================= CHECK OWNER STATUS =================
   Future<void> _checkOwnerStatus() async {
     final auth = FirebaseAuth.instance;
     final uid = auth.currentUser?.uid;
@@ -59,6 +63,7 @@ class _OwnerHomeState extends State<OwnerHome> {
     }
   }
 
+  // ================= LOGOUT =================
   Future<void> _logout() async {
     await AuthService().logout();
     if (!mounted) return;
@@ -69,6 +74,7 @@ class _OwnerHomeState extends State<OwnerHome> {
     );
   }
 
+  // ================= MAIN BUILD =================
   @override
   Widget build(BuildContext context) {
     final fs = Provider.of<FirestoreService>(context, listen: false);
@@ -99,6 +105,7 @@ class _OwnerHomeState extends State<OwnerHome> {
     );
   }
 
+  // ================= DASHBOARD LAYOUT =================
   Widget _buildDashboard(BuildContext context, FirestoreService fs) {
     return DefaultTabController(
       length: 3,
@@ -110,7 +117,7 @@ class _OwnerHomeState extends State<OwnerHome> {
             tabs: [
               Tab(icon: Icon(Icons.receipt_long), text: "Orders"),
               Tab(icon: Icon(Icons.restaurant_menu), text: "Menu"),
-              Tab(icon: Icon(Icons.inventory), text: "Inventory"),
+              Tab(icon: Icon(Icons.inventory_2), text: "Inventory"),
             ],
           ),
           Expanded(
@@ -127,7 +134,7 @@ class _OwnerHomeState extends State<OwnerHome> {
     );
   }
 
-  // ================== ORDERS TAB ==================
+  // ================= ORDERS TAB =================
   Widget _buildOrdersTab(FirestoreService fs) {
     return StreamBuilder<List<OrderModel>>(
       stream: fs.streamOrdersForCanteen(canteenId!),
@@ -135,39 +142,74 @@ class _OwnerHomeState extends State<OwnerHome> {
         if (snap.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
+
         final orders = snap.data ?? [];
-        if (orders.isEmpty) return const Center(child: Text('No orders yet.'));
-        return ListView.builder(
-          itemCount: orders.length,
-          itemBuilder: (context, i) {
-            final o = orders[i];
-            return Card(
-              margin: const EdgeInsets.all(8),
-              child: ListTile(
-                title: Text('Token: ${o.tokenNumber} • ₹${o.totalAmount}'),
-                subtitle: Text('Status: ${o.status}\nItems: ${o.items.map((e) => e['name']).join(', ')}'),
-                trailing: PopupMenuButton<String>(
-                  onSelected: (value) async {
-                    await fs.updateOrderStatus(o.id, value);
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context)
-                        .showSnackBar(SnackBar(content: Text('Order set to $value')));
-                  },
-                  itemBuilder: (context) => const [
-                    PopupMenuItem(value: 'Pending', child: Text('Pending')),
-                    PopupMenuItem(value: 'Ready', child: Text('Ready')),
-                    PopupMenuItem(value: 'Completed', child: Text('Completed')),
-                  ],
-                ),
+        if (orders.isEmpty) {
+          return const Center(child: Text('No orders yet.'));
+        }
+
+        // Order status summary
+        final pending = orders.where((o) => o.status == 'Pending').length;
+        final ready = orders.where((o) => o.status == 'Ready').length;
+        final completed = orders.where((o) => o.status == 'Completed').length;
+
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _statusChip('Pending', pending, Colors.orange),
+                  _statusChip('Ready', ready, Colors.blue),
+                  _statusChip('Completed', completed, Colors.green),
+                ],
               ),
-            );
-          },
+            ),
+            Expanded(
+              child: ListView.builder(
+                itemCount: orders.length,
+                itemBuilder: (context, i) {
+                  final o = orders[i];
+                  return Card(
+                    margin: const EdgeInsets.all(8),
+                    child: ListTile(
+                      title: Text('Token: ${o.tokenNumber} • ₹${o.totalAmount}'),
+                      subtitle: Text(
+                          'Status: ${o.status}\nItems: ${o.items.map((e) => e['name']).join(', ')}'),
+                      trailing: PopupMenuButton<String>(
+                        onSelected: (value) async {
+                          await fs.updateOrderStatus(o.id, value);
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Order set to $value')),
+                          );
+                        },
+                        itemBuilder: (context) => const [
+                          PopupMenuItem(value: 'Pending', child: Text('Pending')),
+                          PopupMenuItem(value: 'Ready', child: Text('Ready')),
+                          PopupMenuItem(value: 'Completed', child: Text('Completed')),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
         );
       },
     );
   }
 
-  // ================== MENU TAB ==================
+  Widget _statusChip(String label, int count, Color color) {
+    return Chip(
+      label: Text('$label: $count', style: const TextStyle(color: Colors.white)),
+      backgroundColor: color,
+    );
+  }
+
+  // ================= MENU TAB =================
   Widget _buildMenuTab(FirestoreService fs) {
     return StreamBuilder(
       stream: fs.streamMenuItems(canteenId!),
@@ -179,39 +221,29 @@ class _OwnerHomeState extends State<OwnerHome> {
           itemCount: items.length,
           itemBuilder: (context, i) {
             final item = items[i];
-            return ListTile(
-              title: Text(item.name),
-              subtitle: Text("₹${item.price} • ${item.available ? 'Available' : 'Out of Stock'}"),
-              trailing: IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: () => fs.deleteMenuItem(canteenId!, item.id),
-              ),
-              onTap: () => _showEditMenuDialog(context, fs, item.id, item.name, item.price),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  // ================== INVENTORY TAB ==================
-  Widget _buildInventoryTab(FirestoreService fs) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: fs.streamInventory(canteenId!),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-        final docs = snapshot.data!.docs;
-        if (docs.isEmpty) return const Center(child: Text('No inventory items.'));
-        return ListView.builder(
-          itemCount: docs.length,
-          itemBuilder: (context, i) {
-            final data = docs[i].data() as Map<String, dynamic>;
-            return ListTile(
-              title: Text(data['name'] ?? 'Unnamed'),
-              subtitle: Text("Qty: ${data['quantity']}"),
-              trailing: IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red),
-                onPressed: () => fs.deleteInventoryItem(canteenId!, docs[i].id),
+            return Card(
+              margin: const EdgeInsets.all(8),
+              child: ListTile(
+                leading: item.imageUrl != null
+                    ? Image.network(item.imageUrl!, width: 50, height: 50, fit: BoxFit.cover)
+                    : const Icon(Icons.fastfood, color: Colors.deepOrange),
+                title: Text(item.name),
+                subtitle: Text("₹${item.price} • ${item.available ? 'Available' : 'Out of Stock'}"),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Switch(
+                      value: item.available,
+                      activeColor: Colors.green,
+                      onChanged: (val) => fs.updateMenuItem(canteenId!, item.id, {'available': val}),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () => fs.deleteMenuItem(canteenId!, item.id),
+                    ),
+                  ],
+                ),
+                onTap: () => _showEditMenuDialog(context, fs, item.id, item.name, item.price),
               ),
             );
           },
@@ -220,32 +252,60 @@ class _OwnerHomeState extends State<OwnerHome> {
     );
   }
 
-  // ================== DIALOGS ==================
+  // ================= ADD MENU ITEM =================
   void _showAddMenuDialog(BuildContext context, FirestoreService fs) {
     final nameCtrl = TextEditingController();
     final priceCtrl = TextEditingController();
+    File? imageFile;
+
+    Future<void> pickImage() async {
+      final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+      if (picked != null) imageFile = File(picked.path);
+    }
 
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Add Menu Item'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Item Name')),
-            TextField(controller: priceCtrl, decoration: const InputDecoration(labelText: 'Price'), keyboardType: TextInputType.number),
-          ],
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Item Name')),
+              TextField(controller: priceCtrl, decoration: const InputDecoration(labelText: 'Price'), keyboardType: TextInputType.number),
+              const SizedBox(height: 10),
+              ElevatedButton.icon(
+                onPressed: pickImage,
+                icon: const Icon(Icons.image),
+                label: const Text('Pick Image'),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () async {
+              if (nameCtrl.text.isEmpty || priceCtrl.text.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter name and price')));
+                return;
+              }
+
+              String? imageUrl;
+              if (imageFile != null) {
+                final ref = FirebaseStorage.instance.ref().child('canteen_menu/${canteenId!}/${DateTime.now()}.jpg');
+                await ref.putFile(imageFile!);
+                imageUrl = await ref.getDownloadURL();
+              }
+
               await fs.addMenuItem(canteenId!, {
                 'name': nameCtrl.text,
                 'price': int.parse(priceCtrl.text),
                 'available': true,
+                'imageUrl': imageUrl,
                 'createdAt': FieldValue.serverTimestamp(),
               });
+
               if (!context.mounted) return;
               Navigator.pop(context);
             },
@@ -256,6 +316,7 @@ class _OwnerHomeState extends State<OwnerHome> {
     );
   }
 
+  // ================= EDIT MENU ITEM =================
   void _showEditMenuDialog(BuildContext context, FirestoreService fs, String itemId, String name, int price) {
     final nameCtrl = TextEditingController(text: name);
     final priceCtrl = TextEditingController(text: price.toString());
@@ -286,6 +347,32 @@ class _OwnerHomeState extends State<OwnerHome> {
           ),
         ],
       ),
+    );
+  }
+
+  // ================= INVENTORY TAB =================
+  Widget _buildInventoryTab(FirestoreService fs) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: fs.streamInventory(canteenId!),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        final docs = snapshot.data!.docs;
+        if (docs.isEmpty) return const Center(child: Text('No inventory items.'));
+        return ListView.builder(
+          itemCount: docs.length,
+          itemBuilder: (context, i) {
+            final data = docs[i].data() as Map<String, dynamic>;
+            return ListTile(
+              title: Text(data['name'] ?? 'Unnamed'),
+              subtitle: Text("Qty: ${data['quantity']}"),
+              trailing: IconButton(
+                icon: const Icon(Icons.add, color: Colors.green),
+                onPressed: () => fs.updateInventoryItem(canteenId!, docs[i].id, {'quantity': (data['quantity'] ?? 0) + 1}),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
