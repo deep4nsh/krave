@@ -27,8 +27,8 @@ class OrderModel {
   factory OrderModel.fromMap(String id, Map<String, dynamic> m) {
     return OrderModel(
       id: id,
-      userId: m['userId'] ?? '',
-      canteenId: m['canteenId'] ?? '',
+      userId: m['userId'] ?? m['user_uid'] ?? '',
+      canteenId: m['canteenId'] ?? m['canteen_id'] ?? '',
       items: List<Map<String, dynamic>>.from(m['items'] ?? []),
       totalAmount: (m['totalAmount'] ?? 0).toInt(),
       tokenNumber: m['tokenNumber'] ?? '',

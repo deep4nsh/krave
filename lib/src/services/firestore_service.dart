@@ -72,7 +72,7 @@ class FirestoreService {
   Stream<List<Canteen>> streamApprovedCanteens() {
     return _db
         .collection('Canteens')
-        .where('status', isEqualTo: 'approved') // ✅ changed from 'approved': true
+        .where('approved', isEqualTo: true)
         .snapshots()
         .map((snap) => snap.docs.map((d) => Canteen.fromMap(d.id, d.data())).toList());
   }
@@ -98,7 +98,7 @@ class FirestoreService {
   Future<void> addMenuItem(String canteenId, Map<String, dynamic> itemData) async {
     await _db.collection('Canteens').doc(canteenId).collection('MenuItems').add({
       'available': itemData['available'] ?? true,
-      'imageUrl': itemData['imageUrl'] ?? null,
+'imageUrl': itemData['imageUrl'],
       ...itemData,
       'createdAt': FieldValue.serverTimestamp(),
     });
@@ -150,8 +150,8 @@ class FirestoreService {
     final id = _uuid.v4();
 
     final data = {
-      'user_uid': userId,
-      'canteen_id': canteenId,
+      'userId': userId,
+      'canteenId': canteenId,
       'items': items,
       'totalAmount': totalAmount,
       'tokenNumber': tokenNumber,
@@ -169,7 +169,7 @@ class FirestoreService {
 
     final snapshots = await _db
         .collection('Orders')
-        .where('canteen_id', isEqualTo: canteenId)
+        .where('canteenId', isEqualTo: canteenId)
         .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(todayStart))
         .get();
 
@@ -186,7 +186,7 @@ class FirestoreService {
   Stream<List<OrderModel>> streamOrdersForCanteen(String canteenId) {
     return _db
         .collection('Orders')
-        .where('canteen_id', isEqualTo: canteenId)
+        .where('canteenId', isEqualTo: canteenId)
         .orderBy('timestamp', descending: true)
         .snapshots()
         .map((s) => s.docs.map((d) => OrderModel.fromMap(d.id, d.data())).toList());

@@ -7,8 +7,13 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _local = FlutterLocalNotificationsPlugin();
 
   Future<void> init() async {
-    // Request permission
+    // Request FCM permissions (iOS); Android 13+ needs runtime notifications permission
     await _fcm.requestPermission(alert: true, badge: true, sound: true);
+
+    // On Android 13+, request notifications permission via local notifications plugin
+    final androidSpecific = _local.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    await androidSpecific?.requestNotificationsPermission();
+
     // Get token (store later in Firestore via UI layer if needed)
     await _fcm.getToken();
 

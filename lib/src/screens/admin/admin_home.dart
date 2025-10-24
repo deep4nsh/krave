@@ -27,9 +27,11 @@ class _AdminHomeState extends State<AdminHome> {
         'status': 'approved',
         'approvedAt': FieldValue.serverTimestamp(),
       });
+      if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Owner approved!')));
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Error approving: $e')));
     }
@@ -41,9 +43,11 @@ class _AdminHomeState extends State<AdminHome> {
         'status': 'rejected',
         'rejectedAt': FieldValue.serverTimestamp(),
       });
+      if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Owner rejected.')));
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('Error rejecting: $e')));
     }

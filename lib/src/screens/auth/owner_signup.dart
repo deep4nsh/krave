@@ -32,7 +32,9 @@ class _OwnerSignupScreenState extends State<OwnerSignupScreen> {
         'email': emailController.text.trim(),
         'canteen_name': canteenController.text.trim(),
         'role': 'owner',
-        'approved': false,
+        'status': 'pending',
+        'canteen_id': null,
+        'createdAt': FieldValue.serverTimestamp(),
       });
 
       if (!mounted) return;

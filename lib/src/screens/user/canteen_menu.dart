@@ -53,6 +53,17 @@ class _CanteenMenuState extends State<CanteenMenu> {
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 child: ListTile(
+                  leading: it.imageUrl != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: Image.network(
+                            it.imageUrl!,
+                            width: 56,
+                            height: 56,
+                            fit: BoxFit.cover,
+                          ),
+                        )
+                      : const Icon(Icons.fastfood, color: Colors.deepOrange),
                   title: Text(it.name, style: const TextStyle(fontWeight: FontWeight.w600)),
                   subtitle: Text('₹${it.price}'),
                   trailing: ElevatedButton(onPressed: () => addToCart(it), child: const Text('Add')),

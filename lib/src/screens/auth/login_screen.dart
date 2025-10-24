@@ -66,9 +66,9 @@ class _LoginScreenState extends State<LoginScreen> {
       // 🔹 Check if this is an Owner
       final ownerDoc = await firestore.collection('Owners').doc(uid).get();
       if (ownerDoc.exists) {
-        final approved = ownerDoc['approved'] ?? false;
+        final status = ownerDoc['status'] ?? 'pending';
         if (!mounted) return;
-        if (approved) {
+        if (status == 'approved') {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => const OwnerHome()),

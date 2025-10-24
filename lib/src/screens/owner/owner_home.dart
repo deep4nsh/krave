@@ -98,9 +98,9 @@ class _OwnerHomeState extends State<OwnerHome> {
           ? const Center(child: Text('No canteen assigned yet. Contact Admin.'))
           : _buildDashboard(context, fs),
       floatingActionButton: FloatingActionButton(
-        child: const Icon(Icons.add),
         tooltip: "Add Menu Item",
         onPressed: () => _showAddMenuDialog(context, fs),
+        child: const Icon(Icons.add),
       ),
     );
   }
@@ -234,7 +234,7 @@ class _OwnerHomeState extends State<OwnerHome> {
                   children: [
                     Switch(
                       value: item.available,
-                      activeColor: Colors.green,
+                      activeThumbColor: Colors.green,
                       onChanged: (val) => fs.updateMenuItem(canteenId!, item.id, {'available': val}),
                     ),
                     IconButton(
@@ -293,17 +293,17 @@ class _OwnerHomeState extends State<OwnerHome> {
 
               String? imageUrl;
               if (imageFile != null) {
-                final ref = FirebaseStorage.instance.ref().child('canteen_menu/${canteenId!}/${DateTime.now()}.jpg');
-                await ref.putFile(imageFile!);
+                final filename = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+                final ref = FirebaseStorage.instance.ref().child('canteen_menu/${canteenId!}/$filename');
+                await ref.putFile(imageFile!, SettableMetadata(contentType: 'image/jpeg'));
                 imageUrl = await ref.getDownloadURL();
               }
 
               await fs.addMenuItem(canteenId!, {
-                'name': nameCtrl.text,
+                'name': nameCtrl.text.trim(),
                 'price': int.parse(priceCtrl.text),
                 'available': true,
                 'imageUrl': imageUrl,
-                'createdAt': FieldValue.serverTimestamp(),
               });
 
               if (!context.mounted) return;

@@ -91,8 +91,8 @@ class Root extends StatelessWidget {
     // Check if Owner
     final ownerDoc = await firestore.collection('Owners').doc(user.uid).get();
     if (ownerDoc.exists) {
-      final approved = ownerDoc.data()?['approved'] ?? false;
-      if (approved) {
+      final status = ownerDoc.data()?['status'] ?? 'pending';
+      if (status == 'approved') {
         return const OwnerHome();
       } else {
         return const WaitingApprovalScreen();
