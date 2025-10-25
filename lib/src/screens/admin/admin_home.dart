@@ -21,20 +21,79 @@ class _AdminHomeState extends State<AdminHome> {
         .snapshots();
   }
 
-  Future<void> _approveOwner(String ownerId) async {
-    try {
-      await _firestore.collection('Owners').doc(ownerId).update({
-        'status': 'approved',
-        'approvedAt': FieldValue.serverTimestamp(),
-      });
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Owner approved!')));
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error approving: $e')));
-    }
+
+  Future<void> _approveAndCreateCanteen({
+    required String ownerId,
+    String? ownerName,
+  }) async {
+    final nameCtrl = TextEditingController(text: ownerName ?? '');
+    final imageCtrl = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Approve Owner & Create Canteen'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              decoration: const InputDecoration(labelText: 'Canteen Name'),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: imageCtrl,
+              decoration: const InputDecoration(labelText: 'Image URL (optional)'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final canteenName = nameCtrl.text.trim();
+              if (canteenName.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please enter canteen name')),
+                );
+                return;
+              }
+              try {
+                final canteenRef = _firestore.collection('Canteens').doc();
+                await canteenRef.set({
+                  'name': canteenName,
+                  'ownerId': ownerId,
+                  'approved': true,
+                  'imageUrl': imageCtrl.text.trim().isEmpty ? null : imageCtrl.text.trim(),
+                  'createdAt': FieldValue.serverTimestamp(),
+                });
+
+                await _firestore.collection('Owners').doc(ownerId).update({
+                  'status': 'approved',
+                  'approvedAt': FieldValue.serverTimestamp(),
+                  'canteen_id': canteenRef.id,
+                });
+
+                if (!mounted) return;
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Approved and created canteen "$canteenName"')),
+                );
+              } catch (e) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Failed: $e')),
+                );
+              }
+            },
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _rejectOwner(String ownerId) async {
@@ -114,7 +173,7 @@ class _AdminHomeState extends State<AdminHome> {
                       IconButton(
                         icon: const Icon(Icons.check_circle, color: Colors.green),
                         tooltip: 'Approve Owner',
-                        onPressed: () => _approveOwner(owners[index].id),
+                        onPressed: () => _approveAndCreateCanteen(ownerId: owners[index].id, ownerName: data['canteen_name'] ?? data['name']),
                       ),
                       IconButton(
                         icon: const Icon(Icons.cancel, color: Colors.red),
