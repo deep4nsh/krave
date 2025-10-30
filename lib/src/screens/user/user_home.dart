@@ -1,28 +1,24 @@
-// lib/screens/user/user_home.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // 👈 Add this
+import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../models/canteen_model.dart';
 import 'canteen_menu.dart';
-import '../auth/login_screen.dart'; // 👈 Import your login screen
+import '../auth/login_screen.dart';
 
 class UserHome extends StatelessWidget {
   const UserHome({super.key});
 
-  // 🔹 Logout function
   Future<void> _logout(BuildContext context) async {
+    final auth = Provider.of<AuthService>(context, listen: false);
+    final navigator = Navigator.of(context);
     try {
-      await FirebaseAuth.instance.signOut();
-      if (!context.mounted) return;
-      // Navigate to Login screen and remove all previous routes
-      Navigator.pushAndRemoveUntil(
-        context,
+      await auth.logout();
+      navigator.pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const LoginScreen()),
-            (route) => false,
+        (route) => false,
       );
     } catch (e) {
-      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Logout failed: $e')),
       );
@@ -50,25 +46,64 @@ class UserHome extends StatelessWidget {
           if (snap.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          final list = snap.data ?? [];
-          if (list.isEmpty) {
-            return const Center(child: Text('No approved canteens.'));
+          if (snap.hasError) {
+            return Center(child: Text('Error: ${snap.error}'));
+          }
+          final canteens = snap.data ?? [];
+          if (canteens.isEmpty) {
+            return const Center(child: Text('No approved canteens available right now.'));
           }
           return ListView.builder(
-            itemCount: list.length,
+            padding: const EdgeInsets.all(8.0),
+            itemCount: canteens.length,
             itemBuilder: (context, i) {
-              final c = list[i];
-              return ListTile(
-                title: Text(c.name),
-                subtitle: Text('Owner: ${c.ownerId}'),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => CanteenMenu(canteen: c)),
-                ),
-              );
+              return CanteenCard(canteen: canteens[i]);
             },
           );
         },
+      ),
+    );
+  }
+}
+
+class CanteenCard extends StatelessWidget {
+  final Canteen canteen;
+  const CanteenCard({super.key, required this.canteen});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final timeStyle = theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant);
+    final hasTimings = canteen.openingTime != null && canteen.closingTime != null;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => CanteenMenu(canteen: canteen)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(canteen.name, style: theme.textTheme.titleLarge),
+              const SizedBox(height: 8),
+              if (hasTimings)
+                Row(
+                  children: [
+                    const Icon(Icons.access_time, size: 16, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Text('${canteen.openingTime} - ${canteen.closingTime}', style: timeStyle),
+                  ],
+                )
+              else
+                Text('Timings not available', style: timeStyle),
+            ],
+          ),
+        ),
       ),
     );
   }

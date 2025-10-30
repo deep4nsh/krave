@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
+import '../../services/auth_service.dart';
+import '../../services/firestore_service.dart';
+import 'owner_dashboard_screen.dart';
 import 'owner_orders.dart';
 import 'manage_menu.dart';
 import 'owner_history.dart';
@@ -15,8 +17,8 @@ class OwnerHome extends StatefulWidget {
 
 class _OwnerHomeState extends State<OwnerHome> {
   int _selectedIndex = 0;
-  String? canteenId;
-  bool loading = true;
+  String? _canteenId;
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -25,67 +27,71 @@ class _OwnerHomeState extends State<OwnerHome> {
   }
 
   Future<void> _loadOwnerData() async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
-    final doc = await FirebaseFirestore.instance.collection('Owners').doc(uid).get();
-    if (doc.exists) {
+    final auth = context.read<AuthService>();
+    final fs = context.read<FirestoreService>();
+    if (auth.currentUser == null) return;
+
+    final ownerDoc = await fs.getOwnerDoc(auth.currentUser!.uid);
+    if (mounted) {
       setState(() {
-        canteenId = doc.data()?['canteen_id'];
-        loading = false;
+        _canteenId = ownerDoc?['canteen_id'];
+        _isLoading = false;
       });
-    } else {
-      setState(() => loading = false);
     }
   }
 
   Future<void> _logout() async {
-    await FirebaseAuth.instance.signOut();
-    if (!mounted) return;
-    Navigator.pushAndRemoveUntil(
-      context,
+    final auth = context.read<AuthService>();
+    final navigator = Navigator.of(context);
+    await auth.logout();
+    navigator.pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
-          (route) => false,
+      (route) => false,
     );
   }
 
-  void _onItemTapped(int index) => setState(() => _selectedIndex = index);
-
   @override
   Widget build(BuildContext context) {
-    if (loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    if (canteenId == null) {
-      return const Scaffold(
-        body: Center(child: Text('No canteen assigned yet. Contact Admin.')),
+    if (_canteenId == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Error')),
+        body: const Center(
+          child: Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Text(
+              'Your account has not been assigned a canteen yet. Please contact the administrator.',
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
       );
     }
 
     final List<Widget> pages = [
-      OwnerOrders(canteenId: canteenId!),
-      ManageMenu(canteenId: canteenId!),
-      OwnerHistory(canteenId: canteenId!),
+      OwnerDashboardScreen(canteenId: _canteenId!),
+      OwnerOrders(canteenId: _canteenId!),
+      ManageMenu(canteenId: _canteenId!),
+      OwnerHistory(canteenId: _canteenId!),
     ];
+
+    final List<String> pageTitles = ['Dashboard', 'Live Orders', 'Manage Menu', 'Order History'];
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Canteen Owner  Dashboard'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.red),
-            onPressed: _logout,
-          ),
-        ],
+        title: Text(pageTitles[_selectedIndex]),
+        actions: [IconButton(icon: const Icon(Icons.logout), onPressed: _logout)],
       ),
       body: pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        selectedItemColor: Colors.deepOrange,
+        onTap: (index) => setState(() => _selectedIndex = index),
+        type: BottomNavigationBarType.fixed,
         items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Dashboard'),
           BottomNavigationBarItem(icon: Icon(Icons.receipt_long), label: 'Orders'),
           BottomNavigationBarItem(icon: Icon(Icons.restaurant_menu), label: 'Menu'),
           BottomNavigationBarItem(icon: Icon(Icons.history), label: 'History'),

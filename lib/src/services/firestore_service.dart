@@ -20,6 +20,23 @@ class FirestoreService {
     return KraveUser.fromMap(doc.id, doc.data()!);
   }
 
+  // ========================= ROLES =========================
+  Future<String> getUserRole(String uid) async {
+    final adminDoc = await _db.collection('Admins').doc(uid).get();
+    if (adminDoc.exists) return 'admin';
+
+    final ownerDoc = await _db.collection('Owners').doc(uid).get();
+    if (ownerDoc.exists) {
+      final status = ownerDoc.data()?['status'] ?? 'pending';
+      return status == 'approved' ? 'approvedOwner' : 'pendingOwner';
+    }
+
+    final userDoc = await _db.collection('Users').doc(uid).get();
+    if (userDoc.exists) return 'user';
+
+    return 'none';
+  }
+
   // ========================= OWNERS =========================
   Future<void> addOwner(String uid, String name, String email, String canteenName) async {
     await _db.collection('Owners').doc(uid).set({
@@ -58,11 +75,25 @@ class FirestoreService {
   }
 
   // ========================= ADMINS =========================
-  Future<bool> verifyAdminCredentials(String email, String password) async {
+  // Prefer identifying admins by their Auth UID (document id) or using
+  // Firebase custom claims. Storing plaintext passwords in Firestore is
+  // insecure and should be avoided.
+
+  /// Returns true if a document exists in `Admins` collection for [uid].
+  Future<bool> isAdmin(String uid) async {
+    final doc = await _db.collection('Admins').doc(uid).get();
+    return doc.exists;
+  }
+
+  /// Legacy helper kept for backward compatibility but it does NOT validate
+  /// passwords against Firestore (that pattern is insecure). This checks only
+  /// that an admin record exists for the given email. Migrate to using
+  /// `isAdmin(uid)` or, better, Firebase Auth custom claims.
+  @Deprecated('Use isAdmin(uid) or Firebase Auth custom claims. Verifying admin passwords in Firestore is insecure.')
+  Future<bool> verifyAdminCredentials(String email, String? password) async {
     final snapshot = await _db
         .collection('Admins')
         .where('email', isEqualTo: email)
-        .where('password', isEqualTo: password)
         .limit(1)
         .get();
     return snapshot.docs.isNotEmpty;
@@ -97,8 +128,6 @@ class FirestoreService {
 
   Future<void> addMenuItem(String canteenId, Map<String, dynamic> itemData) async {
     await _db.collection('Canteens').doc(canteenId).collection('MenuItems').add({
-      'available': itemData['available'] ?? true,
-'imageUrl': itemData['imageUrl'],
       ...itemData,
       'createdAt': FieldValue.serverTimestamp(),
     });

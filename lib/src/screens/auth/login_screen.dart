@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:krave/src/screens/admin/admin_home.dart';
-import 'package:krave/src/screens/auth/user_signup.dart';
+import 'package:provider/provider.dart';
+import '../../services/auth_service.dart';
+import '../../services/firestore_service.dart';
+import '../admin/admin_home.dart';
+import '../auth/user_signup.dart';
 import '../user/user_home.dart';
 import '../owner/owner_home.dart';
 import '../owner/waiting_approval_screen.dart';
@@ -15,84 +16,49 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final emailController = TextEditingController();
-  final passwordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  String _email = '', _password = '';
   bool _loading = false;
 
   Future<void> _login() async {
-    final email = emailController.text.trim();
-    final password = passwordController.text.trim();
-
-    if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Please enter all fields.')));
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
+    _formKey.currentState!.save();
 
     setState(() => _loading = true);
 
+    final auth = Provider.of<AuthService>(context, listen: false);
+    final fs = Provider.of<FirestoreService>(context, listen: false);
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
     try {
-      // 🔹 Sign in using Firebase Authentication
-      final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      final cred = await auth.loginWithEmail(_email, _password);
+      final role = await fs.getUserRole(cred.user!.uid);
 
-      final uid = cred.user!.uid;
-      final firestore = FirebaseFirestore.instance;
-
-      // 🔹 Check if this user is an Admin
-      final adminDoc = await firestore.collection('Admins').doc(uid).get();
-      if (adminDoc.exists) {
-        if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const AdminHome()),
-        );
-        return;
+      switch (role) {
+        case 'admin':
+          navigator.pushReplacement(MaterialPageRoute(builder: (_) => const AdminHome()));
+          break;
+        case 'approvedOwner':
+          navigator.pushReplacement(MaterialPageRoute(builder: (_) => const OwnerHome()));
+          break;
+        case 'pendingOwner':
+          navigator.pushReplacement(MaterialPageRoute(builder: (_) => const WaitingApprovalScreen()));
+          break;
+        case 'user':
+          navigator.pushReplacement(MaterialPageRoute(builder: (_) => const UserHome()));
+          break;
+        default:
+          messenger.showSnackBar(const SnackBar(content: Text('No account found! Please register.')));
+          await auth.logout(); // Log out the user as they have no valid role
       }
 
-      // 🔹 Check if this is a User
-      final userDoc = await firestore.collection('Users').doc(uid).get();
-      if (userDoc.exists) {
-        if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const UserHome()),
-        );
-        return;
-      }
-
-      // 🔹 Check if this is an Owner
-      final ownerDoc = await firestore.collection('Owners').doc(uid).get();
-      if (ownerDoc.exists) {
-        final status = ownerDoc['status'] ?? 'pending';
-        if (!mounted) return;
-        if (status == 'approved') {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const OwnerHome()),
-          );
-        } else {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const WaitingApprovalScreen()),
-          );
-        }
-        return;
-      }
-
-      // 🔹 If nothing matches
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No account found! Please register.')),
-      );
-    } on FirebaseAuthException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.message ?? 'Login failed.')));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(e.toString())));
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
@@ -102,50 +68,41 @@ class _LoginScreenState extends State<LoginScreen> {
       appBar: AppBar(title: const Text('Login')),
       body: Padding(
         padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TextField(
-              controller: emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: 'Password'),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _loading ? null : _login,
-              child: _loading
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextFormField(
+                decoration: const InputDecoration(labelText: 'Email'),
+                keyboardType: TextInputType.emailAddress,
+                validator: (v) => v!.isEmpty || !v.contains('@') ? 'Enter a valid email' : null,
+                onSaved: (v) => _email = v!,
+              ),
+              const SizedBox(height: 8),
+              TextFormField(
+                obscureText: true,
+                decoration: const InputDecoration(labelText: 'Password'),
+                validator: (v) => v!.isEmpty ? 'Please enter your password' : null,
+                onSaved: (v) => _password = v!,
+              ),
+              const SizedBox(height: 20),
+              _loading
                   ? const CircularProgressIndicator()
-                  : const Text('Login'),
-            ),
-            const SizedBox(height: 15),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text("Don't have an account? "),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const UserSignupScreen()),
-                    );
-                  },
-                  child: const Text(
-                    'Register',
-                    style: TextStyle(
-                      color: Colors.blue,
-                      fontWeight: FontWeight.bold,
-                      decoration: TextDecoration.underline,
-                    ),
+                  : ElevatedButton(onPressed: _login, child: const Text('Login')),
+              const SizedBox(height: 15),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text("Don't have an account? "),
+                  GestureDetector(
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UserSignupScreen())),
+                    child: const Text('Register', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, decoration: TextDecoration.underline)),
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
