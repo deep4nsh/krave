@@ -1,129 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+import '../../services/auth_service.dart';
 import '../auth/login_screen.dart';
+import 'owner_approval_screen.dart'; // Import the screen we already built
 
-class AdminHome extends StatefulWidget {
+class AdminHome extends StatelessWidget {
   const AdminHome({super.key});
 
-  @override
-  State<AdminHome> createState() => _AdminHomeState();
-}
-
-class _AdminHomeState extends State<AdminHome> {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-  Stream<QuerySnapshot> _pendingOwners() {
-    // Listen for all owners with status == "pending"
-    return _firestore
-        .collection('Owners')
-        .where('status', isEqualTo: 'pending')
-        .snapshots();
-  }
-
-
-  Future<void> _approveAndCreateCanteen({
-    required String ownerId,
-    String? ownerName,
-  }) async {
-    final nameCtrl = TextEditingController(text: ownerName ?? '');
-    final imageCtrl = TextEditingController();
-
-    await showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Approve Owner & Create Canteen'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameCtrl,
-              decoration: const InputDecoration(labelText: 'Canteen Name'),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: imageCtrl,
-              decoration: const InputDecoration(labelText: 'Image URL (optional)'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final canteenName = nameCtrl.text.trim();
-              if (canteenName.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please enter canteen name')),
-                );
-                return;
-              }
-              try {
-                final canteenRef = _firestore.collection('Canteens').doc();
-                await canteenRef.set({
-                  'name': canteenName,
-                  'ownerId': ownerId,
-                  'approved': true,
-                  'imageUrl': imageCtrl.text.trim().isEmpty ? null : imageCtrl.text.trim(),
-                  'createdAt': FieldValue.serverTimestamp(),
-                });
-
-                await _firestore.collection('Owners').doc(ownerId).update({
-                  'status': 'approved',
-                  'approvedAt': FieldValue.serverTimestamp(),
-                  'canteen_id': canteenRef.id,
-                });
-
-                if (!mounted) return;
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Approved and created canteen "$canteenName"')),
-                );
-              } catch (e) {
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Failed: $e')),
-                );
-              }
-            },
-            child: const Text('Confirm'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _rejectOwner(String ownerId) async {
+  Future<void> _logout(BuildContext context) async {
+    final auth = context.read<AuthService>();
+    final navigator = Navigator.of(context);
     try {
-      await _firestore.collection('Owners').doc(ownerId).update({
-        'status': 'rejected',
-        'rejectedAt': FieldValue.serverTimestamp(),
-      });
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Owner rejected.')));
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error rejecting: $e')));
-    }
-  }
-
-  Future<void> _logout() async {
-    try {
-      await FirebaseAuth.instance.signOut();
-      if (!mounted) return;
-      Navigator.pushAndRemoveUntil(
-        context,
+      await auth.logout();
+      navigator.pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const LoginScreen()),
-            (route) => false,
+        (route) => false,
       );
     } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Logout failed: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Logout failed: $e')),
+      );
     }
   }
 
@@ -134,59 +30,56 @@ class _AdminHomeState extends State<AdminHome> {
         title: const Text('Admin Dashboard'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout, color: Colors.red),
+            icon: const Icon(Icons.logout),
             tooltip: 'Logout',
-            onPressed: _logout,
+            onPressed: () => _logout(context),
           ),
         ],
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: _pendingOwners(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text('No pending approval requests.'));
-          }
-
-          final owners = snapshot.data!.docs;
-
-          return ListView.builder(
-            itemCount: owners.length,
-            itemBuilder: (context, index) {
-              final data = owners[index].data() as Map<String, dynamic>;
-              return Card(
-                margin: const EdgeInsets.all(8),
-                child: ListTile(
-                  leading: const Icon(Icons.storefront, color: Colors.deepOrange),
-                  title: Text(data['name'] ?? 'Unnamed Owner'),
-                  subtitle: Text(data['email'] ?? ''),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.check_circle, color: Colors.green),
-                        tooltip: 'Approve Owner',
-                        onPressed: () => _approveAndCreateCanteen(ownerId: owners[index].id, ownerName: data['canteen_name'] ?? data['name']),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.cancel, color: Colors.red),
-                        tooltip: 'Reject Owner',
-                        onPressed: () => _rejectOwner(owners[index].id),
-                      ),
-                    ],
-                  ),
-                ),
+      body: ListView(
+        padding: const EdgeInsets.all(8.0),
+        children: [
+          _AdminTaskCard(
+            title: 'Owner Approvals',
+            subtitle: 'Approve or reject new canteen owners.',
+            icon: Icons.how_to_reg,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const OwnerApprovalScreen()),
               );
             },
-          );
-        },
+          ),
+          // You can easily add more admin tasks here in the future
+          // _AdminTaskCard(
+          //   title: 'Manage Canteens',
+          //   subtitle: 'Edit or delete existing canteens.',
+          //   icon: Icons.storefront,
+          //   onTap: () { /* Navigate to ManageCanteensScreen */ },
+          // ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdminTaskCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _AdminTaskCard({required this.title, required this.subtitle, required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: ListTile(
+        leading: Icon(icon, size: 40, color: Theme.of(context).colorScheme.primary),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(subtitle),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: onTap,
       ),
     );
   }
