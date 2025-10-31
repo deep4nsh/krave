@@ -10,49 +10,9 @@ class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final _uuid = const Uuid();
 
-  // ... (rest of the service file is unchanged) ...
-
-  // ========================= MENU =========================
-  Stream<List<MenuItemModel>> streamMenuItems(String canteenId) {
-    return _db
-        .collection('Canteens')
-        .doc(canteenId)
-        .collection('MenuItems')
-        .snapshots()
-        .map((snapshot) {
-      debugPrint("================ KRAVE DEBUG (streamMenuItems) ================");
-      debugPrint("Canteen ID: $canteenId | Items found in snapshot: ${snapshot.docs.length}");
-
-      final items = snapshot.docs.map((doc) {
-        try {
-          // Try to parse the document
-          return MenuItemModel.fromMap(doc.id, doc.data());
-        } catch (e, stackTrace) {
-          // If parsing fails, print a very clear error message
-          debugPrint("!!!!!! FAILED TO PARSE MENU ITEM !!!!!!");
-          debugPrint("Document ID: ${doc.id}");
-          debugPrint("Data: ${doc.data()}");
-          debugPrint("Error: $e");
-          debugPrint("StackTrace: $stackTrace");
-          debugPrint("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-          return null; // Return null for the failed item
-        }
-      }).whereType<MenuItemModel>().toList(); // Filter out any nulls from failed parsing
-
-      debugPrint("Successfully parsed ${items.length} items.");
-      debugPrint("==============================================================");
-      return items;
-    });
+  Future<void> createUser(KraveUser user) async {
+    await _db.collection('Users').doc(user.id).set(user.toMap());
   }
-
-  Future<void> addMenuItem(String canteenId, Map<String, dynamic> itemData) async {
-    await _db.collection('Canteens').doc(canteenId).collection('MenuItems').add({
-      ...itemData,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-  }
-  
-  // ... (rest of the service file is unchanged) ...
 
   Future<KraveUser?> getUser(String uid) async {
     final doc = await _db.collection('Users').doc(uid).get();
@@ -82,7 +42,7 @@ class FirestoreService {
       'name': name,
       'email': email,
       'canteen_name': canteenName,
-      'status': 'pending', // waiting for admin approval
+      'status': 'pending',
       'canteen_id': null,
       'createdAt': FieldValue.serverTimestamp(),
     });
@@ -119,20 +79,12 @@ class FirestoreService {
 
   @Deprecated('Use isAdmin(uid) or Firebase Auth custom claims.')
   Future<bool> verifyAdminCredentials(String email, String? password) async {
-    final snapshot = await _db
-        .collection('Admins')
-        .where('email', isEqualTo: email)
-        .limit(1)
-        .get();
+    final snapshot = await _db.collection('Admins').where('email', isEqualTo: email).limit(1).get();
     return snapshot.docs.isNotEmpty;
   }
 
   Stream<List<Canteen>> streamApprovedCanteens() {
-    return _db
-        .collection('Canteens')
-        .where('approved', isEqualTo: true)
-        .snapshots()
-        .map((snap) => snap.docs.map((d) => Canteen.fromMap(d.id, d.data())).toList());
+    return _db.collection('Canteens').where('approved', isEqualTo: true).snapshots().map((snap) => snap.docs.map((d) => Canteen.fromMap(d.id, d.data())).toList());
   }
 
   Future<void> updateCanteenTimings(String canteenId, String openTime, String closeTime) async {
@@ -140,6 +92,27 @@ class FirestoreService {
       'opening_time': openTime,
       'closing_time': closeTime,
       'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Stream<List<MenuItemModel>> streamMenuItems(String canteenId) {
+    return _db.collection('Canteens').doc(canteenId).collection('MenuItems').snapshots().map((snapshot) {
+      final items = snapshot.docs.map((doc) {
+        try {
+          return MenuItemModel.fromMap(doc.id, doc.data());
+        } catch (e, stackTrace) {
+          debugPrint("!!!!!! FAILED TO PARSE MENU ITEM !!!!!! Document ID: ${doc.id}, Data: ${doc.data()}, Error: $e, StackTrace: $stackTrace");
+          return null;
+        }
+      }).whereType<MenuItemModel>().toList();
+      return items;
+    });
+  }
+
+  Future<void> addMenuItem(String canteenId, Map<String, dynamic> itemData) async {
+    await _db.collection('Canteens').doc(canteenId).collection('MenuItems').add({
+      ...itemData,
+      'createdAt': FieldValue.serverTimestamp(),
     });
   }
 
@@ -185,7 +158,6 @@ class FirestoreService {
   }) async {
     final tokenNumber = await _generateTokenForCanteen(canteenId);
     final id = _uuid.v4();
-
     final data = {
       'userId': userId,
       'canteenId': canteenId,
@@ -196,37 +168,30 @@ class FirestoreService {
       'paymentId': paymentId,
       'timestamp': FieldValue.serverTimestamp(),
     };
-
     await _db.collection('Orders').doc(id).set(data);
     return id;
   }
 
   Future<String> _generateTokenForCanteen(String canteenId) async {
     final todayStart = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
-
-    final snapshots = await _db
-        .collection('Orders')
-        .where('canteenId', isEqualTo: canteenId)
-        .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(todayStart))
-        .get();
-
+    final snapshots = await _db.collection('Orders').where('canteenId', isEqualTo: canteenId).where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(todayStart)).get();
     final token = snapshots.docs.length + 1;
     return token.toString();
   }
 
   Stream<OrderModel> streamOrder(String orderId) {
-    return _db.collection('Orders').doc(orderId).snapshots().map(
-          (d) => OrderModel.fromMap(d.id, d.data()!),
-    );
+    return _db.collection('Orders').doc(orderId).snapshots().map((d) => OrderModel.fromMap(d.id, d.data()!));
+  }
+
+  // ADDED: New method to get a single order
+  Future<OrderModel?> getOrder(String orderId) async {
+    final doc = await _db.collection('Orders').doc(orderId).get();
+    if (!doc.exists) return null;
+    return OrderModel.fromMap(doc.id, doc.data()!);
   }
 
   Stream<List<OrderModel>> streamOrdersForCanteen(String canteenId) {
-    return _db
-        .collection('Orders')
-        .where('canteenId', isEqualTo: canteenId)
-        .orderBy('timestamp', descending: true)
-        .snapshots()
-        .map((s) => s.docs.map((d) => OrderModel.fromMap(d.id, d.data())).toList());
+    return _db.collection('Orders').where('canteenId', isEqualTo: canteenId).orderBy('timestamp', descending: true).snapshots().map((s) => s.docs.map((d) => OrderModel.fromMap(d.id, d.data())).toList());
   }
 
   Future<void> updateOrderStatus(String orderId, String status) async {
@@ -234,9 +199,5 @@ class FirestoreService {
       'status': status,
       'updatedAt': FieldValue.serverTimestamp(),
     });
-  }
-
-  Future<void> createUser(KraveUser user) async {
-    await _db.collection('Users').doc(user.id).set(user.toMap());
   }
 }

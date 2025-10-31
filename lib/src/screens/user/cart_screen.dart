@@ -11,7 +11,8 @@ import '../../config.dart';
 import 'order_tracking.dart';
 
 class CartScreen extends StatefulWidget {
-  final Canteen canteen; 
+  final Canteen canteen;
+  // FIX: Removed the obsolete cartItems parameter
   const CartScreen({super.key, required this.canteen, required List<Map<String, Object>> cartItems});
 
   @override
@@ -54,21 +55,25 @@ class _CartScreenState extends State<CartScreen> {
 
     // Optional: Generate and share PDF bill
     final pdfSrv = PdfService();
-    final bytes = await pdfSrv.generateBillPdf(
-        orderId: orderId,
-        canteenName: widget.canteen.name,
-        items: cart.items.values.map((item) => item.toMap()).toList(),
-        total: cart.totalAmount.toInt(),
-        // The token logic is in your firestore service, so we might need to fetch the created order to get it
-        token: 'N/A', 
-    );
-    await pdfSrv.sharePdf(bytes, 'krave_bill_$orderId.pdf');
+    final order = await fs.getOrder(orderId); // Fetch the order to get the token number
+    if (order != null) {
+        final bytes = await pdfSrv.generateBillPdf(
+          orderId: orderId,
+          canteenName: widget.canteen.name,
+          items: cart.items.values.map((item) => item.toMap()).toList(),
+          total: cart.totalAmount.toInt(),
+          token: order.tokenNumber,
+        );
+        await pdfSrv.sharePdf(bytes, 'krave_bill_$orderId.pdf');
+    }
 
     setState(() => _isProcessing = false);
     cart.clearCart();
 
     navigator.popUntil((route) => route.isFirst);
-    navigator.push(MaterialPageRoute(builder: (_) => OrderTracking(orderId: orderId)));
+    if(order != null) {
+      navigator.push(MaterialPageRoute(builder: (_) => OrderTracking(orderId: orderId)));
+    }
   }
 
   void _onPaymentError(PaymentFailureResponse response) {
