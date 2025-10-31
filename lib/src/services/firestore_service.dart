@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
 import '../models/canteen_model.dart';
 import '../models/menu_item_model.dart';
@@ -9,10 +10,49 @@ class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final _uuid = const Uuid();
 
-  // ========================= USERS =========================
-  Future<void> createUser(KraveUser user) async {
-    await _db.collection('Users').doc(user.id).set(user.toMap());
+  // ... (rest of the service file is unchanged) ...
+
+  // ========================= MENU =========================
+  Stream<List<MenuItemModel>> streamMenuItems(String canteenId) {
+    return _db
+        .collection('Canteens')
+        .doc(canteenId)
+        .collection('MenuItems')
+        .snapshots()
+        .map((snapshot) {
+      debugPrint("================ KRAVE DEBUG (streamMenuItems) ================");
+      debugPrint("Canteen ID: $canteenId | Items found in snapshot: ${snapshot.docs.length}");
+
+      final items = snapshot.docs.map((doc) {
+        try {
+          // Try to parse the document
+          return MenuItemModel.fromMap(doc.id, doc.data());
+        } catch (e, stackTrace) {
+          // If parsing fails, print a very clear error message
+          debugPrint("!!!!!! FAILED TO PARSE MENU ITEM !!!!!!");
+          debugPrint("Document ID: ${doc.id}");
+          debugPrint("Data: ${doc.data()}");
+          debugPrint("Error: $e");
+          debugPrint("StackTrace: $stackTrace");
+          debugPrint("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+          return null; // Return null for the failed item
+        }
+      }).whereType<MenuItemModel>().toList(); // Filter out any nulls from failed parsing
+
+      debugPrint("Successfully parsed ${items.length} items.");
+      debugPrint("==============================================================");
+      return items;
+    });
   }
+
+  Future<void> addMenuItem(String canteenId, Map<String, dynamic> itemData) async {
+    await _db.collection('Canteens').doc(canteenId).collection('MenuItems').add({
+      ...itemData,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+  
+  // ... (rest of the service file is unchanged) ...
 
   Future<KraveUser?> getUser(String uid) async {
     final doc = await _db.collection('Users').doc(uid).get();
@@ -20,7 +60,6 @@ class FirestoreService {
     return KraveUser.fromMap(doc.id, doc.data()!);
   }
 
-  // ========================= ROLES =========================
   Future<String> getUserRole(String uid) async {
     final adminDoc = await _db.collection('Admins').doc(uid).get();
     if (adminDoc.exists) return 'admin';
@@ -37,7 +76,6 @@ class FirestoreService {
     return 'none';
   }
 
-  // ========================= OWNERS =========================
   Future<void> addOwner(String uid, String name, String email, String canteenName) async {
     await _db.collection('Owners').doc(uid).set({
       'uid': uid,
@@ -74,22 +112,12 @@ class FirestoreService {
     });
   }
 
-  // ========================= ADMINS =========================
-  // Prefer identifying admins by their Auth UID (document id) or using
-  // Firebase custom claims. Storing plaintext passwords in Firestore is
-  // insecure and should be avoided.
-
-  /// Returns true if a document exists in `Admins` collection for [uid].
   Future<bool> isAdmin(String uid) async {
     final doc = await _db.collection('Admins').doc(uid).get();
     return doc.exists;
   }
 
-  /// Legacy helper kept for backward compatibility but it does NOT validate
-  /// passwords against Firestore (that pattern is insecure). This checks only
-  /// that an admin record exists for the given email. Migrate to using
-  /// `isAdmin(uid)` or, better, Firebase Auth custom claims.
-  @Deprecated('Use isAdmin(uid) or Firebase Auth custom claims. Verifying admin passwords in Firestore is insecure.')
+  @Deprecated('Use isAdmin(uid) or Firebase Auth custom claims.')
   Future<bool> verifyAdminCredentials(String email, String? password) async {
     final snapshot = await _db
         .collection('Admins')
@@ -99,7 +127,6 @@ class FirestoreService {
     return snapshot.docs.isNotEmpty;
   }
 
-  // ========================= CANTEENS =========================
   Stream<List<Canteen>> streamApprovedCanteens() {
     return _db
         .collection('Canteens')
@@ -116,23 +143,6 @@ class FirestoreService {
     });
   }
 
-  // ========================= MENU =========================
-  Stream<List<MenuItemModel>> streamMenuItems(String canteenId) {
-    return _db
-        .collection('Canteens')
-        .doc(canteenId)
-        .collection('MenuItems')
-        .snapshots()
-        .map((s) => s.docs.map((d) => MenuItemModel.fromMap(d.id, d.data())).toList());
-  }
-
-  Future<void> addMenuItem(String canteenId, Map<String, dynamic> itemData) async {
-    await _db.collection('Canteens').doc(canteenId).collection('MenuItems').add({
-      ...itemData,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-  }
-
   Future<void> updateMenuItem(String canteenId, String itemId, Map<String, dynamic> data) async {
     await _db.collection('Canteens').doc(canteenId).collection('MenuItems').doc(itemId).update({
       ...data,
@@ -144,7 +154,6 @@ class FirestoreService {
     await _db.collection('Canteens').doc(canteenId).collection('MenuItems').doc(itemId).delete();
   }
 
-  // ========================= INVENTORY =========================
   Stream<QuerySnapshot> streamInventory(String canteenId) {
     return _db.collection('Canteens').doc(canteenId).collection('Inventory').snapshots();
   }
@@ -167,7 +176,6 @@ class FirestoreService {
     await _db.collection('Canteens').doc(canteenId).collection('Inventory').doc(itemId).delete();
   }
 
-  // ========================= ORDERS =========================
   Future<String> createOrder({
     required String userId,
     required String canteenId,
@@ -226,5 +234,9 @@ class FirestoreService {
       'status': status,
       'updatedAt': FieldValue.serverTimestamp(),
     });
+  }
+
+  Future<void> createUser(KraveUser user) async {
+    await _db.collection('Users').doc(user.id).set(user.toMap());
   }
 }

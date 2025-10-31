@@ -7,25 +7,39 @@ import '../../services/firestore_service.dart';
 import '../../services/cart_provider.dart';
 import 'cart_screen.dart';
 
-class CanteenMenu extends StatelessWidget {
+// 1. CONVERTED TO STATEFULWIDGET TO FIX THE `setState` ERROR
+class CanteenMenu extends StatefulWidget {
   final Canteen canteen;
   const CanteenMenu({super.key, required this.canteen});
 
   @override
+  State<CanteenMenu> createState() => _CanteenMenuState();
+}
+
+class _CanteenMenuState extends State<CanteenMenu> {
+
+  @override
+  void initState() {
+    super.initState();
+    // 2. MOVED `clearCart` to `initState`
+    // We use a post-frame callback to ensure the context is available.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Clear the cart from any previous canteen when entering a new menu.
+      context.read<CartProvider>().clearCart();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final fs = context.read<FirestoreService>();
-    final cart = context.read<CartProvider>();
-
-    // When entering a new canteen menu, clear the old cart.
-    cart.clearCart();
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(canteen.name),
-        actions: [CartIconWithBadge(canteen: canteen)],
+        title: Text(widget.canteen.name),
+        actions: [CartIconWithBadge(canteen: widget.canteen)],
       ),
       body: StreamBuilder<List<MenuItemModel>>(
-        stream: fs.streamMenuItems(canteen.id),
+        stream: fs.streamMenuItems(widget.canteen.id),
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -37,7 +51,6 @@ class CanteenMenu extends StatelessWidget {
           if (items.isEmpty) {
             return const Center(child: Text('This canteen has no menu items yet.'));
           }
-
           final groupedMenu = groupBy(items, (MenuItemModel item) => item.category ?? 'Other');
 
           return ListView.builder(
@@ -52,7 +65,8 @@ class CanteenMenu extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
                     child: Text(category, style: Theme.of(context).textTheme.titleLarge),
                   ),
-                  ...categoryItems.map((item) => MenuItemCard(item: item)).toList(),
+                  // FIX: Removed unnecessary .toList()
+                  ...categoryItems.map((item) => MenuItemCard(item: item)),
                 ],
               );
             },
@@ -82,13 +96,27 @@ class CartIconWithBadge extends StatelessWidget {
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Your cart is empty.')));
             return;
           }
-          navigator.push(MaterialPageRoute(builder: (_) => CartScreen(canteen: canteen)));
+          final cartItems = cart.items.values.map((ci) => {
+                'id': ci.id,
+                'name': ci.name,
+                'price': ci.price,
+                'qty': ci.quantity,
+              }).toList();
+          navigator.push(
+            MaterialPageRoute(
+              builder: (_) => CartScreen(
+                canteen: canteen,
+                cartItems: cartItems,
+              ),
+            ),
+          );
         },
       ),
     );
   }
 }
 
+// 3. REBUILT MenuItemCard TO FIX THE LAYOUT ERROR
 class MenuItemCard extends StatelessWidget {
   final MenuItemModel item;
   const MenuItemCard({super.key, required this.item});
@@ -101,14 +129,32 @@ class MenuItemCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: ListTile(
-          leading: const Icon(Icons.fastfood, size: 40), // Placeholder icon
-          title: Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-          subtitle: Text('₹${item.price}'),
-          trailing: cartItem == null
-              ? ElevatedButton(onPressed: () => cart.addItem(item), child: const Text('Add'))
-              : QuantityStepper(item: cartItem),
+        padding: const EdgeInsets.all(12.0),
+        child: Row(
+          children: [
+            const Icon(Icons.fastfood, size: 40, color: Colors.deepOrange),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                  Text('₹${item.price}'),
+                ],
+              ),
+            ),
+            cartItem == null
+                ? ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(0, 36),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    onPressed: () => cart.addItem(item),
+                    child: const Text('Add'),
+                  )
+                : QuantityStepper(item: cartItem),
+          ],
         ),
       ),
     );

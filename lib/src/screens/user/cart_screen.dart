@@ -12,7 +12,7 @@ import 'order_tracking.dart';
 
 class CartScreen extends StatefulWidget {
   final Canteen canteen; 
-  const CartScreen({super.key, required this.canteen});
+  const CartScreen({super.key, required this.canteen, required List<Map<String, Object>> cartItems});
 
   @override
   State<CartScreen> createState() => _CartScreenState();

@@ -95,8 +95,8 @@ class _ManageMenuState extends State<ManageMenu> {
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         onPressed: _addMenuItemDialog,
-        child: const Icon(Icons.add),
         tooltip: 'Add Menu Item',
+        child: const Icon(Icons.add), // FIX: Moved child to be the last property
       ),
       body: StreamBuilder<List<MenuItemModel>>(
         stream: fs.streamMenuItems(widget.canteenId),
@@ -122,8 +122,8 @@ class _ManageMenuState extends State<ManageMenu> {
                 title: Text(item.name),
                 subtitle: Text("${item.category} - ₹${item.price}"),
                 trailing: IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red),
                   tooltip: 'Delete Item',
+                  icon: const Icon(Icons.delete, color: Colors.red),
                   onPressed: () => fs.deleteMenuItem(widget.canteenId, item.id),
                 ),
               );

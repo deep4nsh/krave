@@ -5,12 +5,14 @@ class CartItem {
   final String id;
   final String name;
   final int price;
+  final String? category; // 1. ADDED CATEGORY FIELD
   int quantity;
 
   CartItem({
     required this.id,
     required this.name,
     required this.price,
+    this.category,
     this.quantity = 1,
   });
 
@@ -22,6 +24,7 @@ class CartItem {
     'name': name,
     'price': price,
     'quantity': quantity,
+    'category': category,
   };
 }
 
@@ -55,9 +58,10 @@ class CartProvider with ChangeNotifier {
         return existing;
       });
     } else {
+      // 2. PASS CATEGORY WHEN CREATING A NEW CART ITEM
       _items.putIfAbsent(
         menuItem.id,
-        () => CartItem(id: menuItem.id, name: menuItem.name, price: menuItem.price),
+        () => CartItem(id: menuItem.id, name: menuItem.name, price: menuItem.price, category: menuItem.category),
       );
     }
     notifyListeners();

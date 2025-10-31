@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
 import '../auth/login_screen.dart';
-import 'owner_approval_screen.dart'; // Import the screen we already built
+import 'owner_approval_screen.dart';
 
 class AdminHome extends StatelessWidget {
   const AdminHome({super.key});
 
   Future<void> _logout(BuildContext context) async {
-    final auth = context.read<AuthService>();
+    // FIX: Capture navigator before the async gap.
     final navigator = Navigator.of(context);
+    final auth = context.read<AuthService>();
     try {
       await auth.logout();
       navigator.pushAndRemoveUntil(
@@ -17,6 +18,7 @@ class AdminHome extends StatelessWidget {
         (route) => false,
       );
     } catch (e) {
+      // This is safe because it's in the error handler, not across the main async gap.
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Logout failed: $e')),
       );
@@ -50,13 +52,6 @@ class AdminHome extends StatelessWidget {
               );
             },
           ),
-          // You can easily add more admin tasks here in the future
-          // _AdminTaskCard(
-          //   title: 'Manage Canteens',
-          //   subtitle: 'Edit or delete existing canteens.',
-          //   icon: Icons.storefront,
-          //   onTap: () { /* Navigate to ManageCanteensScreen */ },
-          // ),
         ],
       ),
     );

@@ -1,4 +1,5 @@
-// lib/models/menu_item.dart
+import 'package:flutter/foundation.dart';
+
 class MenuItemModel {
   final String id;
   final String name;
@@ -14,27 +15,39 @@ class MenuItemModel {
     this.category,
   });
 
-  factory MenuItemModel.fromMap(String id, Map<String, dynamic> m) {
-    // Make price parsing robust to int/double/string/null values
-    final dynamic priceRaw = m['price'] ?? 0;
-    int parsedPrice;
-    if (priceRaw is int) {
-      parsedPrice = priceRaw;
-    } else if (priceRaw is double) {
-      parsedPrice = priceRaw.toInt();
-    } else if (priceRaw is String) {
-      parsedPrice = int.tryParse(priceRaw) ?? 0;
-    } else {
-      parsedPrice = 0;
-    }
+  // This is a robust, defensive factory constructor that will not crash.
+  factory MenuItemModel.fromMap(String id, Map<String, dynamic> data) {
+    try {
+      // Safely parse the price, handling int, double, or even string.
+      int parsedPrice = 0;
+      final priceRaw = data['price'];
+      if (priceRaw is int) {
+        parsedPrice = priceRaw;
+      } else if (priceRaw is double) {
+        parsedPrice = priceRaw.toInt();
+      } else if (priceRaw is String) {
+        parsedPrice = int.tryParse(priceRaw) ?? 0;
+      }
 
-    return MenuItemModel(
-      id: id,
-      name: m['name'] ?? '',
-      price: parsedPrice,
-      available: m['available'] ?? true,
-      category: m['category'],
-    );
+      return MenuItemModel(
+        id: id,
+        name: data['name'] as String? ?? 'Unnamed Item',
+        price: parsedPrice,
+        available: data['available'] as bool? ?? true,
+        category: data['category'] as String?,
+      );
+    } catch (e) {
+      debugPrint('!!!!!! FAILED TO PARSE MenuItemModel !!!!!!');
+      debugPrint('Document ID: $id | Data: $data');
+      debugPrint('Error: $e');
+      // Return a default/error state object instead of crashing
+      return MenuItemModel(
+        id: id,
+        name: 'Error: Invalid Data',
+        price: 0,
+        category: 'Error',
+      );
+    }
   }
 
   Map<String, dynamic> toMap() => {

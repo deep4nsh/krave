@@ -10,8 +10,11 @@ class UserHome extends StatelessWidget {
   const UserHome({super.key});
 
   Future<void> _logout(BuildContext context) async {
-    final auth = Provider.of<AuthService>(context, listen: false);
+    // FIX: Capture navigator and messenger before the async gap.
     final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final auth = Provider.of<AuthService>(context, listen: false);
+    
     try {
       await auth.logout();
       navigator.pushAndRemoveUntil(
@@ -19,7 +22,7 @@ class UserHome extends StatelessWidget {
         (route) => false,
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(content: Text('Logout failed: $e')),
       );
     }
