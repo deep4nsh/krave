@@ -1,6 +1,6 @@
-// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_app_check/firebase_app_check.dart'; // 1. Import App Check
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'src/services/auth_service.dart';
@@ -18,6 +18,11 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  // 2. Activate App Check
+  await FirebaseAppCheck.instance.activate(
+    // You can use other providers, but Play Integrity is the modern standard for Android.
+    androidProvider: AndroidProvider.playIntegrity,
+  );
   await NotificationService().init();
 
   runApp(const KraveApp());
@@ -31,7 +36,6 @@ class KraveApp extends StatelessWidget {
     final colorScheme = ColorScheme.fromSeed(seedColor: Colors.deepOrange);
     return MultiProvider(
       providers: [
-        // App-wide services
         Provider<AuthService>(create: (_) => AuthService()),
         Provider<FirestoreService>(create: (_) => FirestoreService()),
         ChangeNotifierProvider<CartProvider>(create: (_) => CartProvider()),

@@ -5,16 +5,14 @@ import '../../services/firestore_service.dart';
 import '../../models/canteen_model.dart';
 import 'canteen_menu.dart';
 import '../auth/login_screen.dart';
+import 'order_history.dart'; // Import the new history screen
 
 class UserHome extends StatelessWidget {
   const UserHome({super.key});
 
   Future<void> _logout(BuildContext context) async {
-    // FIX: Capture navigator and messenger before the async gap.
     final navigator = Navigator.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    final auth = Provider.of<AuthService>(context, listen: false);
-    
+    final auth = context.read<AuthService>();
     try {
       await auth.logout();
       navigator.pushAndRemoveUntil(
@@ -22,7 +20,8 @@ class UserHome extends StatelessWidget {
         (route) => false,
       );
     } catch (e) {
-      messenger.showSnackBar(
+      // It's safe to use context here as it's not across an async gap.
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Logout failed: $e')),
       );
     }
@@ -36,6 +35,17 @@ class UserHome extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Krave - Canteens'),
         actions: [
+          // ADDED: Button to navigate to Order History
+          IconButton(
+            icon: const Icon(Icons.history),
+            tooltip: 'Order History',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const OrderHistoryScreen()),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Logout',

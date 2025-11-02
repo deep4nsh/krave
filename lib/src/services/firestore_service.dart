@@ -10,6 +10,7 @@ class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final _uuid = const Uuid();
 
+  // ... (user, role, owner, admin, canteen methods are unchanged) ...
   Future<void> createUser(KraveUser user) async {
     await _db.collection('Users').doc(user.id).set(user.toMap());
   }
@@ -156,7 +157,7 @@ class FirestoreService {
     required int totalAmount,
     required String paymentId,
   }) async {
-    final tokenNumber = await _generateTokenForCanteen(canteenId);
+    final tokenNumber = await _generateNextToken(canteenId);
     final id = _uuid.v4();
     final data = {
       'userId': userId,
@@ -172,18 +173,29 @@ class FirestoreService {
     return id;
   }
 
-  Future<String> _generateTokenForCanteen(String canteenId) async {
-    final todayStart = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
-    final snapshots = await _db.collection('Orders').where('canteenId', isEqualTo: canteenId).where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(todayStart)).get();
-    final token = snapshots.docs.length + 1;
-    return token.toString();
+  Future<String> _generateNextToken(String canteenId) async {
+    final today = DateTime.now();
+    final dateString = "${today.year}-${today.month}-${today.day}";
+    final counterRef = _db.collection('Canteens').doc(canteenId).collection('Counters').doc(dateString);
+
+    late int newToken;
+    await _db.runTransaction((transaction) async {
+      final counterDoc = await transaction.get(counterRef);
+      if (!counterDoc.exists) {
+        newToken = 1;
+        transaction.set(counterRef, {'lastToken': newToken});
+      } else {
+        newToken = (counterDoc.data()!['lastToken'] as int) + 1;
+        transaction.update(counterRef, {'lastToken': newToken});
+      }
+    });
+    return newToken.toString();
   }
 
   Stream<OrderModel> streamOrder(String orderId) {
     return _db.collection('Orders').doc(orderId).snapshots().map((d) => OrderModel.fromMap(d.id, d.data()!));
   }
 
-  // ADDED: New method to get a single order
   Future<OrderModel?> getOrder(String orderId) async {
     final doc = await _db.collection('Orders').doc(orderId).get();
     if (!doc.exists) return null;
@@ -192,6 +204,11 @@ class FirestoreService {
 
   Stream<List<OrderModel>> streamOrdersForCanteen(String canteenId) {
     return _db.collection('Orders').where('canteenId', isEqualTo: canteenId).orderBy('timestamp', descending: true).snapshots().map((s) => s.docs.map((d) => OrderModel.fromMap(d.id, d.data())).toList());
+  }
+
+  // ADDED: New method to get orders for a specific user
+  Stream<List<OrderModel>> streamOrdersForUser(String userId) {
+    return _db.collection('Orders').where('userId', isEqualTo: userId).orderBy('timestamp', descending: true).snapshots().map((s) => s.docs.map((d) => OrderModel.fromMap(d.id, d.data())).toList());
   }
 
   Future<void> updateOrderStatus(String orderId, String status) async {

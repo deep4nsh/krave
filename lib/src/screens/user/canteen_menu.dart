@@ -45,12 +45,13 @@ class _CanteenMenuState extends State<CanteenMenu> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snap.hasError) {
-            return Center(child: Text('Error: ${snap.error}'));
+            return Center(child: Text('An error occurred: ${snap.error}'));
           }
           final items = snap.data ?? [];
           if (items.isEmpty) {
             return const Center(child: Text('This canteen has no menu items yet.'));
           }
+
           final groupedMenu = groupBy(items, (MenuItemModel item) => item.category ?? 'Other');
 
           return ListView.builder(
@@ -65,7 +66,6 @@ class _CanteenMenuState extends State<CanteenMenu> {
                     padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
                     child: Text(category, style: Theme.of(context).textTheme.titleLarge),
                   ),
-                  // FIX: Removed unnecessary .toList()
                   ...categoryItems.map((item) => MenuItemCard(item: item)),
                 ],
               );
@@ -96,20 +96,7 @@ class CartIconWithBadge extends StatelessWidget {
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Your cart is empty.')));
             return;
           }
-          final cartItems = cart.items.values.map((ci) => {
-                'id': ci.id,
-                'name': ci.name,
-                'price': ci.price,
-                'qty': ci.quantity,
-              }).toList();
-          navigator.push(
-            MaterialPageRoute(
-              builder: (_) => CartScreen(
-                canteen: canteen,
-                cartItems: cartItems,
-              ),
-            ),
-          );
+          navigator.push(MaterialPageRoute(builder: (_) => CartScreen(canteen: canteen)));
         },
       ),
     );
@@ -144,14 +131,9 @@ class MenuItemCard extends StatelessWidget {
               ),
             ),
             cartItem == null
-                ? ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(0, 36),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    onPressed: () => cart.addItem(item),
-                    child: const Text('Add'),
+                ? SizedBox(
+                    width: 80,
+                    child: ElevatedButton(onPressed: () => cart.addItem(item), child: const Text('Add')),
                   )
                 : QuantityStepper(item: cartItem),
           ],
@@ -174,7 +156,7 @@ class QuantityStepper extends StatelessWidget {
       children: [
         IconButton(icon: const Icon(Icons.remove), onPressed: () => cart.removeSingleItem(item.id)),
         Text(item.quantity.toString(), style: const TextStyle(fontSize: 18)),
-        IconButton(icon: const Icon(Icons.add), onPressed: () => cart.addItem(MenuItemModel(id: item.id, name: item.name, price: item.price))),
+        IconButton(icon: const Icon(Icons.add), onPressed: () => cart.addItem(MenuItemModel(id: item.id, name: item.name, price: item.price, category: item.category))),
       ],
     );
   }

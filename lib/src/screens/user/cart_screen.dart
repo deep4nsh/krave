@@ -6,14 +6,12 @@ import '../../services/payment_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../services/cart_provider.dart';
-import '../../services/pdf_service.dart';
 import '../../config.dart';
-import 'order_tracking.dart';
+import 'order_history.dart'; // Import the new history screen
 
 class CartScreen extends StatefulWidget {
   final Canteen canteen;
-  // FIX: Removed the obsolete cartItems parameter
-  const CartScreen({super.key, required this.canteen, required List<Map<String, Object>> cartItems});
+  const CartScreen({super.key, required this.canteen});
 
   @override
   State<CartScreen> createState() => _CartScreenState();
@@ -45,34 +43,25 @@ class _CartScreenState extends State<CartScreen> {
     final fs = context.read<FirestoreService>();
     final navigator = Navigator.of(context);
 
-    final orderId = await fs.createOrder(
-      userId: auth.currentUser!.uid,
-      canteenId: widget.canteen.id,
-      items: cart.items.values.map((item) => item.toMap()).toList(),
-      totalAmount: cart.totalAmount.toInt(),
-      paymentId: response.paymentId ?? 'razorpay_noid',
-    );
+    try {
+      await fs.createOrder(
+        userId: auth.currentUser!.uid,
+        canteenId: widget.canteen.id,
+        items: cart.items.values.map((item) => item.toMap()).toList(),
+        totalAmount: cart.totalAmount.toInt(),
+        paymentId: response.paymentId ?? 'razorpay_noid',
+      );
 
-    // Optional: Generate and share PDF bill
-    final pdfSrv = PdfService();
-    final order = await fs.getOrder(orderId); // Fetch the order to get the token number
-    if (order != null) {
-        final bytes = await pdfSrv.generateBillPdf(
-          orderId: orderId,
-          canteenName: widget.canteen.name,
-          items: cart.items.values.map((item) => item.toMap()).toList(),
-          total: cart.totalAmount.toInt(),
-          token: order.tokenNumber,
-        );
-        await pdfSrv.sharePdf(bytes, 'krave_bill_$orderId.pdf');
-    }
+      setState(() => _isProcessing = false);
+      cart.clearCart();
 
-    setState(() => _isProcessing = false);
-    cart.clearCart();
-
-    navigator.popUntil((route) => route.isFirst);
-    if(order != null) {
-      navigator.push(MaterialPageRoute(builder: (_) => OrderTracking(orderId: orderId)));
+      // FIX: Navigate to Order History Screen after payment
+      navigator.popUntil((route) => route.isFirst);
+      navigator.pushReplacement(MaterialPageRoute(builder: (_) => const OrderHistoryScreen()));
+      
+    } catch (e) {
+      setState(() => _isProcessing = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save order: $e')));
     }
   }
 
@@ -90,11 +79,12 @@ class _CartScreenState extends State<CartScreen> {
     final auth = context.read<AuthService>();
 
     setState(() => _isProcessing = true);
+
     _payment.openCheckout(
       amountInPaise: (cart.totalAmount * 100).toInt(),
       orderNote: 'Krave Canteen Order',
       email: auth.currentUser?.email ?? '',
-      contact: '', // You might want to add a phone number field for the user
+      contact: '', 
       razorpayKey: KraveConfig.razorpayKeyId,
     );
   }

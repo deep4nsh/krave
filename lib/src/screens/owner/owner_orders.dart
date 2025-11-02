@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../models/order_model.dart';
 import '../../services/firestore_service.dart';
 
@@ -12,8 +14,6 @@ class OwnerOrders extends StatelessWidget {
     final fs = context.read<FirestoreService>();
 
     return StreamBuilder<List<OrderModel>>(
-      // We get all orders and then filter them locally. This is simpler than creating multiple
-      // complex Firestore queries and works well for a reasonable number of daily orders.
       stream: fs.streamOrdersForCanteen(canteenId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -37,9 +37,9 @@ class OwnerOrders extends StatelessWidget {
           padding: const EdgeInsets.all(8.0),
           children: [
             if (pendingOrders.isNotEmpty)
-              _OrderSection(title: 'New Orders', orders: pendingOrders, fs: fs),
+              _OrderSection(title: 'New Orders', orders: pendingOrders),
             if (preparingOrders.isNotEmpty)
-              _OrderSection(title: 'In Progress', orders: preparingOrders, fs: fs),
+              _OrderSection(title: 'In Progress', orders: preparingOrders),
           ],
         );
       },
@@ -50,9 +50,8 @@ class OwnerOrders extends StatelessWidget {
 class _OrderSection extends StatelessWidget {
   final String title;
   final List<OrderModel> orders;
-  final FirestoreService fs;
 
-  const _OrderSection({required this.title, required this.orders, required this.fs});
+  const _OrderSection({required this.title, required this.orders});
 
   @override
   Widget build(BuildContext context) {
@@ -63,7 +62,7 @@ class _OrderSection extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
           child: Text(title, style: Theme.of(context).textTheme.headlineSmall),
         ),
-        ...orders.map((order) => _OrderCard(order: order, fs: fs)),
+        ...orders.map((order) => _OrderCard(order: order)),
       ],
     );
   }
@@ -71,14 +70,12 @@ class _OrderSection extends StatelessWidget {
 
 class _OrderCard extends StatelessWidget {
   final OrderModel order;
-  final FirestoreService fs;
-
-  const _OrderCard({required this.order, required this.fs});
+  const _OrderCard({required this.order});
 
   String get _nextStatus {
     if (order.status == 'Pending') return 'Preparing';
     if (order.status == 'Preparing') return 'Ready for Pickup';
-    return 'Completed';
+    return 'Completed'; // Should not happen on this screen
   }
 
   String get _actionText {
@@ -89,6 +86,8 @@ class _OrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final fs = context.read<FirestoreService>();
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       child: Padding(
@@ -96,19 +95,35 @@ class _OrderCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Token: ${order.tokenNumber}',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Token: ${order.tokenNumber}',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                Text(DateFormat.jm().format(order.timestamp), style: Theme.of(context).textTheme.bodySmall),
+              ],
             ),
             const Divider(),
-            ...order.items.map((item) => Text('${item['quantity'] ?? item['qty']} x ${item['name']}')),
-            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: order.items.map((item) {
+                  return Text('${item['quantity'] ?? item['qty']} x ${item['name']}');
+                }).toList(),
+              ),
+            ),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () => fs.updateOrderStatus(order.id, _nextStatus),
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  fs.updateOrderStatus(order.id, _nextStatus);
+                },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: order.status == 'Pending' ? Colors.blue : Colors.green,
+                  backgroundColor: order.status == 'Pending' ? Colors.blueAccent : Colors.green,
                 ),
                 child: Text(_actionText),
               ),

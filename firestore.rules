@@ -1,0 +1,75 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isUser(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && exists(/databases/$(database)/documents/Admins/$(request.auth.uid));
+    }
+    
+    function isOwner(canteenId) {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/Owners/$(request.auth.uid)).data.canteen_id == canteenId;
+    }
+    
+    // Users can only read and write their own document.
+    match /Users/{userId} {
+      allow read, write: if isUser(userId);
+    }
+    
+    // Admins collection - THE DEFINITIVE FIX
+    match /Admins/{adminId} {
+      // Any authenticated user can check if their own admin document exists.
+      allow get: if isAuthenticated(); 
+      // Only existing admins can list all other admins.
+      allow list, write: if isAdmin();
+    }
+    
+    // Owners collection
+    match /Owners/{ownerId} {
+      // Any authenticated user can check if an owner document exists.
+      allow get: if isAuthenticated();
+      allow list, update: if isAdmin();
+      allow create: if isUser(ownerId);
+    }
+    
+    // Canteens collection
+    match /Canteens/{canteenId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || isOwner(canteenId);
+      
+      match /MenuItems/{itemId} {
+        allow read: if isAuthenticated();
+        allow write: if isAdmin() || isOwner(canteenId);
+      }
+      
+      match /Inventory/{inventoryId} {
+        allow read, write: if isAdmin() || isOwner(canteenId);
+      }
+      
+      match /Counters/{dateString} {
+        allow read, write: if isAuthenticated();
+      }
+    }
+    
+    // Orders collection
+    match /Orders/{orderId} {
+      allow read: if isAuthenticated() && 
+                     (request.auth.uid == resource.data.userId || 
+                      isAdmin() || 
+                      isOwner(resource.data.canteenId));
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+      allow update: if isAdmin() || isOwner(resource.data.canteenId);
+      allow delete: if isAdmin();
+    }
+  }
+}

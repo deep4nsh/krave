@@ -2,5 +2,5 @@
 
 class KraveConfig {
   // This is your public Razorpay Key ID.
-  static const String razorpayKeyId = 'rzp_test_RZzwtiiEFtqPgq'; 
+  static const String razorpayKeyId = 'rzp_test_RaOVAroS2KoIEp';
 }
