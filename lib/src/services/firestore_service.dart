@@ -11,7 +11,6 @@ class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final _uuid = const Uuid();
 
-  // ... (user, role, owner, admin, canteen methods are unchanged) ...
   Future<void> createUser(KraveUser user) async {
     await _db.collection('Users').doc(user.id).set(user.toMap());
   }
@@ -36,6 +35,24 @@ class FirestoreService {
     if (userDoc.exists) return 'user';
 
     return 'none';
+  }
+
+  // ADDED: Method to save the device-specific FCM token
+  Future<void> updateUserFCMToken(String uid, String token) async {
+    final userDoc = _db.collection('Users').doc(uid);
+    final ownerDoc = _db.collection('Owners').doc(uid);
+    final adminDoc = _db.collection('Admins').doc(uid);
+
+    final data = {'fcmToken': token};
+
+    // Update the token in whichever collection the user belongs to
+    if ((await userDoc.get()).exists) {
+      await userDoc.update(data);
+    } else if ((await ownerDoc.get()).exists) {
+      await ownerDoc.update(data);
+    } else if ((await adminDoc.get()).exists) {
+      await adminDoc.update(data);
+    }
   }
 
   Future<void> addOwner(String uid, String name, String email, String canteenName) async {
@@ -151,12 +168,10 @@ class FirestoreService {
     await _db.collection('Canteens').doc(canteenId).collection('Inventory').doc(itemId).delete();
   }
 
-  // UPDATED: New Token Generation Algorithm
   String _generateNextToken(String userName) {
     final now = DateTime.now();
     final random = Random();
 
-    // Create a 4-letter prefix from the user's name
     final namePrefix = userName.length >= 4 
         ? userName.substring(0, 4).toLowerCase()
         : userName.padRight(4, 'x').toLowerCase();
@@ -176,7 +191,6 @@ class FirestoreService {
     required int totalAmount,
     required String paymentId,
   }) async {
-    // Fetch the user to get their name for the token
     final user = await getUser(userId);
     final userName = user?.name ?? 'user';
 

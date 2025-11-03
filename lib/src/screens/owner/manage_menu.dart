@@ -1,7 +1,9 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/menu_item_model.dart';
 import '../../services/firestore_service.dart';
+import '../../services/image_search_service.dart';
 
 class ManageMenu extends StatefulWidget {
   final String canteenId;
@@ -12,6 +14,48 @@ class ManageMenu extends StatefulWidget {
 }
 
 class _ManageMenuState extends State<ManageMenu> {
+  bool _isFetchingImages = false;
+
+  Future<void> _batchFetchImages() async {
+    final fs = context.read<FirestoreService>();
+    final imageSearch = context.read<ImageSearchService>();
+    final messenger = ScaffoldMessenger.of(context);
+
+    setState(() => _isFetchingImages = true);
+
+    try {
+      final snapshot = await fs.streamMenuItems(widget.canteenId).first;
+      final itemsWithoutImages = snapshot.where((item) => item.photoUrl == null || item.photoUrl!.isEmpty).toList();
+      
+      if (itemsWithoutImages.isEmpty) {
+        messenger.showSnackBar(const SnackBar(content: Text('All items already have images!')));
+        setState(() => _isFetchingImages = false);
+        return;
+      }
+
+      messenger.showSnackBar(SnackBar(content: Text('Fetching images for ${itemsWithoutImages.length} items...')));
+
+      int successCount = 0;
+      for (final item in itemsWithoutImages) {
+        final imageUrl = await imageSearch.searchImage(item.name);
+        if (imageUrl != null) {
+          await fs.updateMenuItem(widget.canteenId, item.id, {'photoUrl': imageUrl});
+          successCount++;
+        }
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+
+      messenger.showSnackBar(SnackBar(
+        content: Text('Successfully fetched images for $successCount/${itemsWithoutImages.length} items'),
+        duration: const Duration(seconds: 3),
+      ));
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text('Error: $e')));
+    } finally {
+      setState(() => _isFetchingImages = false);
+    }
+  }
+
   void _addMenuItemDialog() {
     final nameCtrl = TextEditingController();
     final priceCtrl = TextEditingController();
@@ -33,7 +77,7 @@ class _ManageMenuState extends State<ManageMenu> {
                     if (isSaving) ...[
                       const Center(child: CircularProgressIndicator()),
                       const SizedBox(height: 16),
-                      const Text('Saving item...'),
+                      const Text('Searching for image and saving...'),
                     ] else ...[
                       TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name')),
                       TextField(controller: priceCtrl, decoration: const InputDecoration(labelText: 'Price'), keyboardType: TextInputType.number),
@@ -47,6 +91,7 @@ class _ManageMenuState extends State<ManageMenu> {
                 ElevatedButton(
                   onPressed: () async {
                     final fs = context.read<FirestoreService>();
+                    final imageSearch = context.read<ImageSearchService>();
                     final messenger = ScaffoldMessenger.of(context);
                     final navigator = Navigator.of(context);
 
@@ -67,16 +112,19 @@ class _ManageMenuState extends State<ManageMenu> {
                     setDialogState(() => isSaving = true);
 
                     try {
+                      final imageUrl = await imageSearch.searchImage(name);
+
                       await fs.addMenuItem(widget.canteenId, {
                         'name': name,
                         'price': parsedPrice,
                         'category': category,
                         'available': true,
+                        'photoUrl': imageUrl,
                       });
-                      navigator.pop(); // Close the dialog
+                      navigator.pop();
                     } catch (e) {
                       messenger.showSnackBar(SnackBar(content: Text('Failed to add item: $e')));
-                      setDialogState(() => isSaving = false); // Allow user to retry
+                      setDialogState(() => isSaving = false);
                     }
                   },
                   child: const Text('Add'),
@@ -93,10 +141,32 @@ class _ManageMenuState extends State<ManageMenu> {
   Widget build(BuildContext context) {
     final fs = context.read<FirestoreService>();
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
+      appBar: AppBar(
+        title: const Text('Manage Menu'),
+        actions: [
+          if (_isFetchingImages)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.0),
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.auto_awesome),
+              tooltip: 'Auto-fetch images for items without images',
+              onPressed: _batchFetchImages,
+            ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: _addMenuItemDialog,
-        tooltip: 'Add Menu Item',
-        child: const Icon(Icons.add), // FIX: Moved child to be the last property
+        label: const Text('ADD ITEM'),
+        icon: const Icon(Icons.add),
       ),
       body: StreamBuilder<List<MenuItemModel>>(
         stream: fs.streamMenuItems(widget.canteenId),
@@ -114,22 +184,55 @@ class _ManageMenuState extends State<ManageMenu> {
             );
           }
           return ListView.builder(
+            padding: const EdgeInsets.all(8.0),
             itemCount: items.length,
             itemBuilder: (context, i) {
-              final item = items[i];
-              return ListTile(
-                leading: const Icon(Icons.fastfood), // Placeholder icon
-                title: Text(item.name),
-                subtitle: Text("${item.category} - ₹${item.price}"),
-                trailing: IconButton(
-                  tooltip: 'Delete Item',
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  onPressed: () => fs.deleteMenuItem(widget.canteenId, item.id),
-                ),
-              );
+              return _MenuItemTile(canteenId: widget.canteenId, item: items[i]);
             },
           );
         },
+      ),
+    );
+  }
+}
+
+class _MenuItemTile extends StatelessWidget {
+  final String canteenId;
+  final MenuItemModel item;
+
+  const _MenuItemTile({required this.canteenId, required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final fs = context.read<FirestoreService>();
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      child: ListTile(
+        leading: SizedBox(
+          width: 60,
+          height: 60,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8.0),
+            child: CachedNetworkImage(
+              imageUrl: item.photoUrl ?? '',
+              fit: BoxFit.cover,
+              placeholder: (context, url) => Container(color: Colors.black12),
+              errorWidget: (context, url, error) => Container(
+                color: Colors.black12,
+                child: Icon(Icons.fastfood, color: theme.colorScheme.primary, size: 30),
+              ),
+            ),
+          ),
+        ),
+        title: Text(item.name, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+        subtitle: Text('${item.category} - ₹${item.price}', style: theme.textTheme.bodyMedium),
+        trailing: IconButton(
+          tooltip: 'Delete Item',
+          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+          onPressed: () => fs.deleteMenuItem(canteenId, item.id),
+        ),
       ),
     );
   }

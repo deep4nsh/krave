@@ -6,6 +6,7 @@ class MenuItemModel {
   final int price;
   final bool available;
   final String? category;
+  final String? photoUrl;
 
   MenuItemModel({
     required this.id,
@@ -13,6 +14,7 @@ class MenuItemModel {
     required this.price,
     this.available = true,
     this.category,
+    this.photoUrl,
   });
 
   // This is a robust, defensive factory constructor that will not crash.
@@ -35,6 +37,7 @@ class MenuItemModel {
         price: parsedPrice,
         available: data['available'] as bool? ?? true,
         category: data['category'] as String?,
+        photoUrl: data['photoUrl'] as String?,
       );
     } catch (e) {
       debugPrint('!!!!!! FAILED TO PARSE MenuItemModel !!!!!!');
@@ -55,5 +58,6 @@ class MenuItemModel {
     'price': price,
     'available': available,
     'category': category,
+    'photoUrl': photoUrl,
   };
 }

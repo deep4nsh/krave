@@ -13,10 +13,12 @@ service cloud.firestore {
     }
     
     function isAdmin() {
+      // Secure: Checks for existence of user's UID in a protected Admins collection.
       return isAuthenticated() && exists(/databases/$(database)/documents/Admins/$(request.auth.uid));
     }
     
     function isOwner(canteenId) {
+      // Secure: Fetches the owner doc and checks if the canteen_id matches.
       return isAuthenticated() && 
              get(/databases/$(database)/documents/Owners/$(request.auth.uid)).data.canteen_id == canteenId;
     }
@@ -26,49 +28,61 @@ service cloud.firestore {
       allow read, write: if isUser(userId);
     }
     
-    // Admins collection - THE DEFINITIVE FIX
+    // Admins collection
     match /Admins/{adminId} {
-      // Any authenticated user can check if their own admin document exists.
-      allow get: if isAuthenticated(); 
-      // Only existing admins can list all other admins.
-      allow list, write: if isAdmin();
+      // Only admins can read the list of other admins.
+      allow read: if isAdmin();
+      // Only admins can create or modify admin documents.
+      allow write: if isAdmin();
     }
     
     // Owners collection
     match /Owners/{ownerId} {
-      // Any authenticated user can check if an owner document exists.
-      allow get: if isAuthenticated();
-      allow list, update: if isAdmin();
+      // A user can create their own owner application.
       allow create: if isUser(ownerId);
+      // An authenticated user can check if an owner document exists (e.g., for status).
+      allow get: if isAuthenticated();
+      // Only admins can list or update owner documents (e.g., for approval).
+      allow list, update: if isAdmin();
     }
     
     // Canteens collection
     match /Canteens/{canteenId} {
+      // Any logged-in user can view canteen details.
       allow read: if isAuthenticated();
+      // Only the owner or an admin can modify a canteen.
       allow write: if isAdmin() || isOwner(canteenId);
       
+      // MenuItems subcollection
       match /MenuItems/{itemId} {
         allow read: if isAuthenticated();
         allow write: if isAdmin() || isOwner(canteenId);
       }
       
+      // Inventory subcollection
       match /Inventory/{inventoryId} {
         allow read, write: if isAdmin() || isOwner(canteenId);
       }
       
+      // Counters subcollection - FIXED
       match /Counters/{dateString} {
-        allow read, write: if isAuthenticated();
+        // CRITICAL FIX: Only the owner or an admin can read or write to counters.
+        allow read, write: if isAdmin() || isOwner(canteenId);
       }
     }
     
     // Orders collection
     match /Orders/{orderId} {
+      // A user can read their own order, an owner can read their canteen's orders, and admins can read any order.
       allow read: if isAuthenticated() && 
                      (request.auth.uid == resource.data.userId || 
                       isAdmin() || 
                       isOwner(resource.data.canteenId));
+      // A user can only create an order for themselves.
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+      // An owner or admin can update an order (e.g., change status).
       allow update: if isAdmin() || isOwner(resource.data.canteenId);
+      // Only admins can delete orders.
       allow delete: if isAdmin();
     }
   }

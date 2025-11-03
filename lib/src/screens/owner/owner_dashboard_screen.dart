@@ -23,7 +23,7 @@ class OwnerDashboardScreen extends StatelessWidget {
 
         final orders = snapshot.data ?? [];
         
-        // Calculate stats
+        // --- Calculate Stats ---
         final pendingOrders = orders.where((o) => o.status == 'Pending').length;
         final preparingOrders = orders.where((o) => o.status == 'Preparing').length;
 
@@ -35,40 +35,82 @@ class OwnerDashboardScreen extends StatelessWidget {
         final revenueToday = todaysOrders
             .where((o) => o.status == 'Ready for Pickup' || o.status == 'Completed')
             .fold(0.0, (sum, item) => sum + item.totalAmount);
+            
+        final List<Map<String, dynamic>> stats = [
+          {'title': 'Pending Orders', 'value': pendingOrders.toString(), 'icon': Icons.hourglass_top_rounded},
+          {'title': 'In Progress', 'value': preparingOrders.toString(), 'icon': Icons.soup_kitchen_rounded},
+          {'title': 'Completed Today', 'value': completedToday.toString(), 'icon': Icons.check_circle_rounded},
+          {'title': 'Revenue Today', 'value': '₹${revenueToday.toStringAsFixed(0)}', 'icon': Icons.monetization_on_rounded},
+        ];
 
-        return GridView.count(
-          crossAxisCount: 2,
+        return ListView.separated(
           padding: const EdgeInsets.all(16.0),
-          mainAxisSpacing: 16,
-          crossAxisSpacing: 16,
-          children: [
-            _StatCard(
-              title: 'Pending Orders',
-              value: pendingOrders.toString(),
-              icon: Icons.hourglass_top,
-              color: Colors.orange,
-            ),
-            _StatCard(
-              title: 'In Progress',
-              value: preparingOrders.toString(),
-              icon: Icons.soup_kitchen,
-              color: Colors.blue,
-            ),
-            _StatCard(
-              title: 'Completed Today',
-              value: completedToday.toString(),
-              icon: Icons.check_circle,
-              color: Colors.green,
-            ),
-            _StatCard(
-              title: 'Revenue Today',
-              value: '₹${revenueToday.toStringAsFixed(2)}',
-              icon: Icons.attach_money,
-              color: Colors.purple,
-            ),
-          ],
+          itemCount: stats.length,
+          separatorBuilder: (context, index) => const SizedBox(height: 16),
+          itemBuilder: (context, index) {
+            final stat = stats[index];
+            return _AnimatedStatCard(
+              index: index,
+              title: stat['title'],
+              value: stat['value'],
+              icon: stat['icon'],
+            );
+          },
         );
       },
+    );
+  }
+}
+
+class _AnimatedStatCard extends StatefulWidget {
+  final int index;
+  final String title;
+  final String value;
+  final IconData icon;
+
+  const _AnimatedStatCard({
+    required this.index,
+    required this.title,
+    required this.value,
+    required this.icon,
+  });
+
+  @override
+  State<_AnimatedStatCard> createState() => _AnimatedStatCardState();
+}
+
+class _AnimatedStatCardState extends State<_AnimatedStatCard> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _animation = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
+    
+    Future.delayed(Duration(milliseconds: 100 * widget.index), () {
+      if (mounted) _controller.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _animation,
+      child: SlideTransition(
+        position: Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(_animation),
+        child: _StatCard(title: widget.title, value: widget.value, icon: widget.icon),
+      ),
     );
   }
 }
@@ -77,32 +119,45 @@ class _StatCard extends StatelessWidget {
   final String title;
   final String value;
   final IconData icon;
-  final Color color;
 
-  const _StatCard({required this.title, required this.value, required this.icon, required this.color});
+  const _StatCard({required this.title, required this.value, required this.icon});
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Card(
-      elevation: 2,
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
+        padding: const EdgeInsets.all(20.0),
+        child: Row(
           children: [
-            Icon(icon, size: 40, color: color),
-            const SizedBox(height: 12),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    theme.colorScheme.primary.withOpacity(0.25),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+              child: Icon(icon, size: 36, color: theme.colorScheme.primary),
             ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.bodyLarge,
-              textAlign: TextAlign.center,
+            const SizedBox(width: 20),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  title,
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ],
             ),
           ],
         ),
