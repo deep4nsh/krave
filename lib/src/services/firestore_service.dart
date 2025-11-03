@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
@@ -150,6 +151,24 @@ class FirestoreService {
     await _db.collection('Canteens').doc(canteenId).collection('Inventory').doc(itemId).delete();
   }
 
+  // UPDATED: New Token Generation Algorithm
+  String _generateNextToken(String userName) {
+    final now = DateTime.now();
+    final random = Random();
+
+    // Create a 4-letter prefix from the user's name
+    final namePrefix = userName.length >= 4 
+        ? userName.substring(0, 4).toLowerCase()
+        : userName.padRight(4, 'x').toLowerCase();
+
+    final randomPart = random.nextInt(100).toString().padLeft(2, '0');
+    final hourPart = now.hour.toString().padLeft(2, '0');
+    final minutePart = now.minute.toString().padLeft(2, '0');
+    final secondPart = now.second.toString().padLeft(2, '0');
+
+    return '$namePrefix-$randomPart$hourPart$minutePart$secondPart';
+  }
+
   Future<String> createOrder({
     required String userId,
     required String canteenId,
@@ -157,7 +176,11 @@ class FirestoreService {
     required int totalAmount,
     required String paymentId,
   }) async {
-    final tokenNumber = await _generateNextToken(canteenId);
+    // Fetch the user to get their name for the token
+    final user = await getUser(userId);
+    final userName = user?.name ?? 'user';
+
+    final tokenNumber = _generateNextToken(userName);
     final id = _uuid.v4();
     final data = {
       'userId': userId,
@@ -171,25 +194,6 @@ class FirestoreService {
     };
     await _db.collection('Orders').doc(id).set(data);
     return id;
-  }
-
-  Future<String> _generateNextToken(String canteenId) async {
-    final today = DateTime.now();
-    final dateString = "${today.year}-${today.month}-${today.day}";
-    final counterRef = _db.collection('Canteens').doc(canteenId).collection('Counters').doc(dateString);
-
-    late int newToken;
-    await _db.runTransaction((transaction) async {
-      final counterDoc = await transaction.get(counterRef);
-      if (!counterDoc.exists) {
-        newToken = 1;
-        transaction.set(counterRef, {'lastToken': newToken});
-      } else {
-        newToken = (counterDoc.data()!['lastToken'] as int) + 1;
-        transaction.update(counterRef, {'lastToken': newToken});
-      }
-    });
-    return newToken.toString();
   }
 
   Stream<OrderModel> streamOrder(String orderId) {
@@ -206,7 +210,6 @@ class FirestoreService {
     return _db.collection('Orders').where('canteenId', isEqualTo: canteenId).orderBy('timestamp', descending: true).snapshots().map((s) => s.docs.map((d) => OrderModel.fromMap(d.id, d.data())).toList());
   }
 
-  // ADDED: New method to get orders for a specific user
   Stream<List<OrderModel>> streamOrdersForUser(String userId) {
     return _db.collection('Orders').where('userId', isEqualTo: userId).orderBy('timestamp', descending: true).snapshots().map((s) => s.docs.map((d) => OrderModel.fromMap(d.id, d.data())).toList());
   }
