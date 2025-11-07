@@ -33,8 +33,8 @@ class KraveApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Define the professional color palette
-    const primaryColor = Color(0xFF00E5FF); // Vibrant cyan/teal
+    // Define the new professional color palette with contrast
+    const primaryColor = Color(0xFFFFC107); // Vibrant Amber/Orange
     const backgroundColor = Color(0xFF0D1B2A); // Deep dark blue
     const surfaceColor = Color(0xFF1B263B); // Slightly lighter blue for cards
     const textColor = Color(0xFFE0E1DD); // Off-white for readability
@@ -55,6 +55,7 @@ class KraveApp extends StatelessWidget {
         onSurface: textColor,
         error: Colors.redAccent,
         onError: Colors.white,
+        secondary: secondaryTextColor, // Added for consistency
       ),
 
       appBarTheme: const AppBarTheme(
@@ -104,7 +105,6 @@ class KraveApp extends StatelessWidget {
         ),
       ),
       
-      // FIXED: Use CardThemeData instead of CardTheme
       cardTheme: CardThemeData(
         elevation: 4,
         color: surfaceColor,
@@ -127,6 +127,13 @@ class KraveApp extends StatelessWidget {
         titleLarge: TextStyle(color: textColor, fontWeight: FontWeight.w600),
         bodyLarge: TextStyle(color: textColor, height: 1.5),
         bodyMedium: TextStyle(color: secondaryTextColor, height: 1.5),
+      ),
+
+      // DEFINITIVE FIX: Use TabBarThemeData instead of TabBarTheme
+      tabBarTheme: const TabBarThemeData(
+        indicatorColor: primaryColor,
+        labelColor: primaryColor,
+        unselectedLabelColor: secondaryTextColor,
       ),
     );
 

@@ -37,7 +37,6 @@ class FirestoreService {
     return 'none';
   }
 
-  // ADDED: Method to save the device-specific FCM token
   Future<void> updateUserFCMToken(String uid, String token) async {
     final userDoc = _db.collection('Users').doc(uid);
     final ownerDoc = _db.collection('Owners').doc(uid);
@@ -45,7 +44,6 @@ class FirestoreService {
 
     final data = {'fcmToken': token};
 
-    // Update the token in whichever collection the user belongs to
     if ((await userDoc.get()).exists) {
       await userDoc.update(data);
     } else if ((await ownerDoc.get()).exists) {
@@ -56,6 +54,10 @@ class FirestoreService {
   }
 
   Future<void> addOwner(String uid, String name, String email, String canteenName) async {
+    // Create the user document first, so the role can be determined on login
+    await createUser(KraveUser(id: uid, name: name, email: email, role: 'pendingOwner'));
+
+    // Then, create the owner application document
     await _db.collection('Owners').doc(uid).set({
       'uid': uid,
       'name': name,
@@ -77,19 +79,48 @@ class FirestoreService {
     return _db.collection('Owners').where('status', isEqualTo: 'pending').snapshots();
   }
 
-  Future<void> approveOwner(String uid) async {
-    await _db.collection('Owners').doc(uid).update({
+  // DEFINITIVE FIX: Complete approval logic
+  Future<void> approveOwner(String ownerId) async {
+    final ownerRef = _db.collection('Owners').doc(ownerId);
+    final ownerSnapshot = await ownerRef.get();
+    final ownerData = ownerSnapshot.data();
+
+    if (ownerData == null) {
+      throw Exception('Owner not found!');
+    }
+
+    // 1. Create the new canteen document
+    final canteenRef = await _db.collection('Canteens').add({
+      'name': ownerData['canteen_name'],
+      'ownerId': ownerId,
+      'approved': true,
+      'opening_time': '9:00 AM', // Default opening time
+      'closing_time': '5:00 PM', // Default closing time
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    // 2. Update the owner's document with the new canteen ID and approved status
+    await ownerRef.update({
       'status': 'approved',
+      'canteen_id': canteenRef.id,
       'approvedAt': FieldValue.serverTimestamp(),
+    });
+
+    // 3. Update the user's role in the Users collection for proper redirection
+    await _db.collection('Users').doc(ownerId).update({
+      'role': 'approvedOwner'
     });
   }
 
-  Future<void> rejectOwner(String uid) async {
-    await _db.collection('Owners').doc(uid).update({
-      'status': 'rejected',
-      'rejectedAt': FieldValue.serverTimestamp(),
-    });
+  // DEFINITIVE FIX: Rejection now triggers the secure Cloud Function
+  Future<void> rejectOwner(String ownerId) async {
+    // Deleting the owner document will trigger the onOwnerDelete cloud function
+    // which will securely delete the user from Firebase Auth.
+    await _db.collection('Owners').doc(ownerId).delete();
+    // Also delete the associated user document
+    await _db.collection('Users').doc(ownerId).delete();
   }
+
 
   Future<bool> isAdmin(String uid) async {
     final doc = await _db.collection('Admins').doc(uid).get();

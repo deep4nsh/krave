@@ -40,14 +40,17 @@ class OwnerDashboardScreen extends StatelessWidget {
           {'title': 'Pending Orders', 'value': pendingOrders.toString(), 'icon': Icons.hourglass_top_rounded},
           {'title': 'In Progress', 'value': preparingOrders.toString(), 'icon': Icons.soup_kitchen_rounded},
           {'title': 'Completed Today', 'value': completedToday.toString(), 'icon': Icons.check_circle_rounded},
-          {'title': 'Revenue Today', 'value': '₹${revenueToday.toStringAsFixed(0)}', 'icon': Icons.monetization_on_rounded},
+          {'title': 'Revenue Today', 'value': 'Rs. ${revenueToday.toStringAsFixed(0)}', 'icon': Icons.monetization_on_rounded},
         ];
 
         return ListView.separated(
           padding: const EdgeInsets.all(16.0),
-          itemCount: stats.length,
+          itemCount: stats.length + 1, // Add one for the time picker card
           separatorBuilder: (context, index) => const SizedBox(height: 16),
           itemBuilder: (context, index) {
+            if (index == stats.length) {
+              return _TimePickerCard(canteenId: canteenId);
+            }
             final stat = stats[index];
             return _AnimatedStatCard(
               index: index,
@@ -159,6 +162,66 @@ class _StatCard extends StatelessWidget {
                 ),
               ],
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TimePickerCard extends StatelessWidget {
+  final String canteenId;
+  const _TimePickerCard({required this.canteenId});
+
+  Future<void> _selectTime(BuildContext context, bool isOpeningTime) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+    if (picked != null) {
+      final fs = context.read<FirestoreService>();
+      final formattedTime = picked.format(context);
+      if (isOpeningTime) {
+        fs.updateCanteenTimings(canteenId, formattedTime, ' ');
+      } else {
+        fs.updateCanteenTimings(canteenId, ' ', formattedTime);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    theme.colorScheme.primary.withOpacity(0.25),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+              child: Icon(Icons.access_time_filled_rounded, size: 36, color: theme.colorScheme.primary),
+            ),
+            const SizedBox(width: 20),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Manage Timings', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text('Set your canteen hours', style: theme.textTheme.bodyMedium),
+                ],
+              ),
+            ),
+            IconButton(onPressed: () => _selectTime(context, true), icon: const Icon(Icons.edit)),
           ],
         ),
       ),

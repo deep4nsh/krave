@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
+import '../../services/image_search_service.dart';
 import '../../widgets/gradient_background.dart';
 import 'owner_dashboard_screen.dart';
 import 'owner_orders.dart';
@@ -70,6 +71,87 @@ class _OwnerHomeState extends State<OwnerHome> {
     });
   }
 
+  // Step 1: The dialog logic is now here, in the parent Scaffold
+  void _addMenuItemDialog() {
+    final nameCtrl = TextEditingController();
+    final priceCtrl = TextEditingController();
+    final categoryCtrl = TextEditingController();
+    bool isSaving = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Add Menu Item'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isSaving) ...[
+                      const Center(child: CircularProgressIndicator()),
+                      const SizedBox(height: 16),
+                      const Text('Searching for image and saving...'),
+                    ] else ...[
+                      TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name')),
+                      TextField(controller: priceCtrl, decoration: const InputDecoration(labelText: 'Price'), keyboardType: TextInputType.number),
+                      TextField(controller: categoryCtrl, decoration: const InputDecoration(labelText: 'Category')),
+                    ]
+                  ],
+                ),
+              ),
+              actions: isSaving ? [] : [
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                ElevatedButton(
+                  onPressed: () async {
+                    final fs = context.read<FirestoreService>();
+                    final imageSearch = context.read<ImageSearchService>();
+                    final messenger = ScaffoldMessenger.of(context);
+                    final navigator = Navigator.of(context);
+
+                    final name = nameCtrl.text.trim();
+                    final priceText = priceCtrl.text.trim();
+                    final category = categoryCtrl.text.trim();
+
+                    if (name.isEmpty || priceText.isEmpty || category.isEmpty) {
+                      messenger.showSnackBar(const SnackBar(content: Text('All fields are required.')));
+                      return;
+                    }
+                    final parsedPrice = int.tryParse(priceText);
+                    if (parsedPrice == null) {
+                      messenger.showSnackBar(const SnackBar(content: Text('Please enter a valid price.')));
+                      return;
+                    }
+
+                    setDialogState(() => isSaving = true);
+
+                    try {
+                      final imageUrl = await imageSearch.searchImage(name);
+                      await fs.addMenuItem(_canteenId!, {
+                        'name': name,
+                        'price': parsedPrice,
+                        'category': category,
+                        'available': true,
+                        'photoUrl': imageUrl,
+                      });
+                      navigator.pop();
+                    } catch (e) {
+                      messenger.showSnackBar(SnackBar(content: Text('Failed to add item: $e')));
+                      setDialogState(() => isSaving = false);
+                    }
+                  },
+                  child: const Text('Add'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -105,7 +187,7 @@ class _OwnerHomeState extends State<OwnerHome> {
     final List<String> pageTitles = ['Dashboard', 'Live Orders', 'Manage Menu', 'Order History'];
 
     return Scaffold(
-      extendBody: true, // Make body extend behind the bottom nav bar
+      extendBody: true,
       appBar: AppBar(
         title: Text(pageTitles[_selectedIndex]),
         actions: [IconButton(icon: const Icon(Icons.logout, color: Colors.redAccent), onPressed: _logout)],
@@ -121,6 +203,14 @@ class _OwnerHomeState extends State<OwnerHome> {
         selectedIndex: _selectedIndex,
         onTap: _onNavTapped,
       ),
+      // Step 2: The FAB is now here and shown conditionally
+      floatingActionButton: _selectedIndex == 2 
+          ? FloatingActionButton.extended(
+              onPressed: _addMenuItemDialog,
+              label: const Text('ADD ITEM'),
+              icon: const Icon(Icons.add),
+            )
+          : null,
     );
   }
 }

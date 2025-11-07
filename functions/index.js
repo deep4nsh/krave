@@ -11,6 +11,28 @@ const razorpay = new Razorpay({
   key_secret: functions.config().razorpay.key_secret,
 });
 
+// --- Cloud Functions for User Management ---
+
+/**
+ * Triggered when a document in the 'Owners' collection is deleted.
+ * This function securely deletes the corresponding user from Firebase Auth.
+ */
+exports.onOwnerDelete = functions.firestore
+    .document("Owners/{ownerId}")
+    .onDelete(async (snap, context) => {
+      const ownerId = context.params.ownerId;
+      console.log(`--- Deleting auth user for ownerId: ${ownerId} ---`);
+      try {
+        await admin.auth().deleteUser(ownerId);
+        console.log(`Successfully deleted auth user: ${ownerId}`);
+      } catch (error) {
+        console.error(`Error deleting auth user ${ownerId}:`, error);
+      }
+    });
+
+
+// --- Cloud Functions for Payments ---
+
 /**
  * Creates a Razorpay order on the server.
  * Called by the app before opening the Razorpay checkout.
