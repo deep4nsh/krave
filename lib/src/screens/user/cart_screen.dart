@@ -45,7 +45,7 @@ class _CartScreenState extends State<CartScreen> {
     final navigator = Navigator.of(context);
 
     try {
-      await fs.createOrder(
+      final orderId = await fs.createOrder(
         userId: auth.currentUser!.uid,
         canteenId: widget.canteen.id,
         items: cart.items.values.map((item) => item.toMap()).toList(),

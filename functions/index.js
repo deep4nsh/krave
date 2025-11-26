@@ -14,17 +14,17 @@ const razorpay = new Razorpay({
 // --- Cloud Functions for User Management ---
 
 exports.onOwnerDelete = functions.firestore
-    .document("Owners/{ownerId}")
-    .onDelete(async (snap, context) => {
-      const ownerId = context.params.ownerId;
-      console.log(`--- Deleting auth user for ownerId: ${ownerId} ---`);
-      try {
-        await admin.auth().deleteUser(ownerId);
-        console.log(`Successfully deleted auth user: ${ownerId}`);
-      } catch (error) {
-        console.error(`Error deleting auth user ${ownerId}:`, error);
-      }
-    });
+  .document("Owners/{ownerId}")
+  .onDelete(async (snap, context) => {
+    const ownerId = context.params.ownerId;
+    console.log(`--- Deleting auth user for ownerId: ${ownerId} ---`);
+    try {
+      await admin.auth().deleteUser(ownerId);
+      console.log(`Successfully deleted auth user: ${ownerId}`);
+    } catch (error) {
+      console.error(`Error deleting auth user ${ownerId}:`, error);
+    }
+  });
 
 
 // --- Cloud Functions for Notifications ---
