@@ -74,6 +74,9 @@ dependencies {
 
     // 🔹 Optional: Analytics (recommended)
     implementation("com.google.firebase:firebase-analytics")
+    
+    // 🔹 AppCompat for Razorpay Theme
+    implementation("androidx.appcompat:appcompat:1.6.1")
 
     // 🔹 Flutter dependencies handled by Flutter itself
 }

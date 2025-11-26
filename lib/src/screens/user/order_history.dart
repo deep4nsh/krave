@@ -20,6 +20,10 @@ class OrderHistoryScreen extends StatelessWidget {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: const Text('Your Orders'),
       ),
       body: GradientBackground(
@@ -131,7 +135,14 @@ class _OrderHistoryCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Token #${order.tokenNumber}', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                  Flexible(
+                    child: Text(
+                      'Token #${order.tokenNumber}', 
+                      style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   Text(DateFormat.yMMMd().format(order.timestamp), style: theme.textTheme.bodyMedium),
                 ],
               ),
@@ -140,8 +151,14 @@ class _OrderHistoryCard extends StatelessWidget {
                 children: [
                   Icon(_getStatusIcon(order.status), color: theme.colorScheme.primary, size: 20),
                   const SizedBox(width: 8),
-                  Text(order.status, style: theme.textTheme.bodyLarge),
-                  const Spacer(),
+                  Expanded(
+                    child: Text(
+                      order.status, 
+                      style: theme.textTheme.bodyLarge,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   Text('₹${order.totalAmount}', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                 ],
               ),
