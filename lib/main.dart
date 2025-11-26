@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:provider/provider.dart';
@@ -50,7 +51,7 @@ class KraveApp extends StatelessWidget {
         primary: primaryColor,
         background: backgroundColor,
         surface: surfaceColor,
-        onPrimary: Colors.black, // Text on top of primary-colored elements (e.g., buttons)
+        onPrimary: Colors.white, // Text on top of primary-colored elements (e.g., buttons)
         onBackground: textColor,
         onSurface: textColor,
         error: Colors.redAccent,
@@ -94,7 +95,7 @@ class KraveApp extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           minimumSize: const Size.fromHeight(52),
           backgroundColor: primaryColor,
-          foregroundColor: Colors.black, // Text color on the button
+          foregroundColor: Colors.white, // Text color on the button
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -122,11 +123,25 @@ class KraveApp extends StatelessWidget {
         ),
       ),
       
-      textTheme: const TextTheme(
-        headlineSmall: TextStyle(color: textColor, fontWeight: FontWeight.w600),
-        titleLarge: TextStyle(color: textColor, fontWeight: FontWeight.w600),
-        bodyLarge: TextStyle(color: textColor, height: 1.5),
-        bodyMedium: TextStyle(color: secondaryTextColor, height: 1.5),
+      textTheme: GoogleFonts.outfitTextTheme(
+        Theme.of(context).textTheme,
+      ).copyWith(
+        headlineSmall: GoogleFonts.outfit(
+          color: textColor, 
+          fontWeight: FontWeight.w600,
+        ),
+        titleLarge: GoogleFonts.outfit(
+          color: textColor, 
+          fontWeight: FontWeight.w600,
+        ),
+        bodyLarge: GoogleFonts.outfit(
+          color: textColor, 
+          height: 1.5,
+        ),
+        bodyMedium: GoogleFonts.outfit(
+          color: secondaryTextColor, 
+          height: 1.5,
+        ),
       ),
 
       // DEFINITIVE FIX: Use TabBarThemeData instead of TabBarTheme

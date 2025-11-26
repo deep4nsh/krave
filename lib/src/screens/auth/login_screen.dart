@@ -8,6 +8,7 @@ import '../auth/user_signup.dart';
 import '../user/user_home.dart';
 import '../owner/owner_home.dart';
 import '../owner/waiting_approval_screen.dart';
+import '../../widgets/scale_button.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -148,7 +149,32 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     // Login Button
                     _loading
                         ? const Center(child: CircularProgressIndicator())
-                        : ElevatedButton(onPressed: _login, child: const Text('Login')),
+                        : ScaleButton(
+                            onPressed: _login,
+                            child: Container(
+                              height: 52,
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                color: colorScheme.primary,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: colorScheme.primary.withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                'Login',
+                                style: textTheme.titleMedium?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
                     const SizedBox(height: 20),
 
                     // Registration Link

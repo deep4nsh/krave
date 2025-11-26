@@ -31,6 +31,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   collection: ^1.18.0
   firebase_app_check: ^0.3.2+10
+  google_fonts: ^6.2.1
+  shimmer: ^3.0.0
 
 dev_dependencies:
   flutter_test:

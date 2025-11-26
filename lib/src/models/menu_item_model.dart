@@ -7,6 +7,7 @@ class MenuItemModel {
   final bool available;
   final String? category;
   final String? photoUrl;
+  final bool isVeg;
 
   MenuItemModel({
     required this.id,
@@ -15,6 +16,7 @@ class MenuItemModel {
     this.available = true,
     this.category,
     this.photoUrl,
+    this.isVeg = true, // Default to veg if not specified
   });
 
   // This is a robust, defensive factory constructor that will not crash.
@@ -38,6 +40,7 @@ class MenuItemModel {
         available: data['available'] as bool? ?? true,
         category: data['category'] as String?,
         photoUrl: data['photoUrl'] as String?,
+        isVeg: data['isVeg'] as bool? ?? true,
       );
     } catch (e) {
       debugPrint('!!!!!! FAILED TO PARSE MenuItemModel !!!!!!');
@@ -59,5 +62,6 @@ class MenuItemModel {
     'available': available,
     'category': category,
     'photoUrl': photoUrl,
+    'isVeg': isVeg,
   };
 }
