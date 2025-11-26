@@ -144,9 +144,106 @@ class CanteenCard extends StatelessWidget {
   final Canteen canteen;
   const CanteenCard({super.key, required this.canteen});
 
+  Future<void> _showEditTimingsDialog(BuildContext context) async {
+    TimeOfDay? openingTime;
+    TimeOfDay? closingTime;
+
+    // Helper to parse "HH:MM AM/PM" string to TimeOfDay
+    TimeOfDay? parseTime(String? timeStr) {
+      if (timeStr == null) return null;
+      try {
+        final parts = timeStr.split(' ');
+        final timeParts = parts[0].split(':');
+        int hour = int.parse(timeParts[0]);
+        final int minute = int.parse(timeParts[1]);
+        final bool isPm = parts[1].toUpperCase() == 'PM';
+        
+        if (isPm && hour != 12) hour += 12;
+        if (!isPm && hour == 12) hour = 0;
+        
+        return TimeOfDay(hour: hour, minute: minute);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    // Initialize with current values if available
+    openingTime = parseTime(canteen.openingTime);
+    closingTime = parseTime(canteen.closingTime);
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Canteen Timings'),
+        content: StatefulBuilder(
+          builder: (context, setState) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: const Text('Opening Time'),
+                trailing: Text(openingTime?.format(context) ?? 'Select'),
+                onTap: () async {
+                  final time = await showTimePicker(
+                    context: context,
+                    initialTime: openingTime ?? const TimeOfDay(hour: 9, minute: 0),
+                  );
+                  if (time != null) {
+                    setState(() => openingTime = time);
+                  }
+                },
+              ),
+              ListTile(
+                title: const Text('Closing Time'),
+                trailing: Text(closingTime?.format(context) ?? 'Select'),
+                onTap: () async {
+                  final time = await showTimePicker(
+                    context: context,
+                    initialTime: closingTime ?? const TimeOfDay(hour: 17, minute: 0),
+                  );
+                  if (time != null) {
+                    setState(() => closingTime = time);
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              if (openingTime != null && closingTime != null) {
+                try {
+                  await context.read<FirestoreService>().updateCanteenTimings(
+                    canteen.id,
+                    openingTime!.format(context),
+                    closingTime!.format(context),
+                  );
+                  if (context.mounted) Navigator.pop(context);
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error updating timings: $e')),
+                    );
+                  }
+                }
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final user = context.watch<AuthService>().currentUser;
+    final isOwner = user?.uid == canteen.ownerId;
     final hasTimings = canteen.openingTime != null && canteen.closingTime != null;
 
     return Card(
@@ -166,12 +263,44 @@ class CanteenCard extends StatelessWidget {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  Icon(Icons.access_time, size: 18, color: theme.colorScheme.primary),
-                  const SizedBox(width: 8),
-                  if (hasTimings)
-                    Text('${canteen.openingTime} - ${canteen.closingTime}', style: theme.textTheme.bodyMedium)
-                  else
-                    Text('Timings not available', style: theme.textTheme.bodyMedium),
+                  InkWell(
+                    onTap: isOwner ? () => _showEditTimingsDialog(context) : null,
+                    borderRadius: BorderRadius.circular(4),
+                    child: Padding(
+                      padding: const EdgeInsets.all(4.0),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.access_time, 
+                            size: 18, 
+                            color: isOwner ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant
+                          ),
+                          const SizedBox(width: 8),
+                          if (hasTimings)
+                            Text(
+                              '${canteen.openingTime} - ${canteen.closingTime}', 
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: isOwner ? theme.colorScheme.primary : null,
+                                decoration: isOwner ? TextDecoration.underline : null,
+                              )
+                            )
+                          else
+                            Text(
+                              'Set Timings', 
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: isOwner ? theme.colorScheme.primary : null,
+                                fontStyle: FontStyle.italic
+                              )
+                            ),
+                          if (isOwner) ...[
+                             const SizedBox(width: 4),
+                             Icon(Icons.edit, size: 14, color: theme.colorScheme.primary),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ],
