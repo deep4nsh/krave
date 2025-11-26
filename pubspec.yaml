@@ -63,3 +63,4 @@ flutter_launcher_icons:
   macos:
     generate: true
     image_path: "web/icons/Icon-512.png"
+    

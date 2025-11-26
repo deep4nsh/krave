@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../models/canteen_model.dart';
@@ -115,6 +116,12 @@ class RestaurantCard extends StatelessWidget {
                               );
                             }
                           }
+                        } else {
+                           if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Please select both opening and closing times')),
+                              );
+                            }
                         }
                       },
                       child: const Text('Save'),
@@ -151,26 +158,51 @@ class RestaurantCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Image Section
-            Container(
+            SizedBox(
               height: 180,
               width: double.infinity,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    theme.colorScheme.primary.withOpacity(0.8),
-                    theme.colorScheme.secondary.withOpacity(0.6),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
               child: Stack(
                 children: [
-                  Center(
-                    child: Icon(
-                      Icons.store_mall_directory,
-                      size: 64,
-                      color: Colors.white.withOpacity(0.8),
+                  CachedNetworkImage(
+                    imageUrl: 'https://loremflickr.com/640/360/food,restaurant/all?lock=${canteen.id.hashCode}',
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: double.infinity,
+                    placeholder: (context, url) => Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            theme.colorScheme.primary.withOpacity(0.8),
+                            theme.colorScheme.secondary.withOpacity(0.6),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                      ),
+                      child: Center(
+                        child: Icon(
+                          Icons.store_mall_directory,
+                          size: 64,
+                          color: Colors.white.withOpacity(0.8),
+                        ),
+                      ),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      color: Colors.grey[800],
+                      child: const Center(child: Icon(Icons.broken_image, color: Colors.white)),
+                    ),
+                  ),
+                  // Gradient Overlay for text readability
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withOpacity(0.7),
+                        ],
+                      ),
                     ),
                   ),
                   if (isOwner)

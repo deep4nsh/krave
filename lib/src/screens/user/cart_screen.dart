@@ -151,10 +151,10 @@ class _CartItemTile extends StatelessWidget {
             Text('${item.quantity}x', style: theme.textTheme.titleLarge?.copyWith(color: theme.colorScheme.primary)),
             const SizedBox(width: 16),
             Expanded(
-              child: Text(item.name, style: theme.textTheme.bodyLarge),
+              child: Text(item.name, style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white)),
             ),
             const SizedBox(width: 16),
-            Text('₹${item.price * item.quantity}', style: theme.textTheme.titleMedium),
+            Text('₹${item.price * item.quantity}', style: theme.textTheme.titleMedium?.copyWith(color: Colors.white)),
           ],
         ),
       ),
@@ -181,23 +181,23 @@ class _BillDetailsCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Item Total', style: theme.textTheme.bodyLarge),
-                Text('₹${cart.totalAmount.toStringAsFixed(2)}', style: theme.textTheme.bodyLarge),
+                Text('Item Total', style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white)),
+                Text('₹${cart.totalAmount.toStringAsFixed(2)}', style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white)),
               ],
             ),
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Taxes & Charges', style: theme.textTheme.bodyLarge),
-                Text('₹0.00', style: theme.textTheme.bodyLarge),
+                Text('Taxes & Charges', style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white)),
+                Text('₹0.00', style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white)),
               ],
             ),
             const Divider(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Grand Total', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+                Text('Grand Total', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, color: Colors.white)),
                 Text('₹${cart.totalAmount.toStringAsFixed(2)}', style: theme.textTheme.headlineSmall?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.bold)),
               ],
             ),

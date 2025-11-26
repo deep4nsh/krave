@@ -159,7 +159,7 @@ class _OrderHistoryCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Text('₹${order.totalAmount}', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                  Text('₹${order.totalAmount}', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: Colors.white)),
                 ],
               ),
               const SizedBox(height: 10),

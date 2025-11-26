@@ -72,8 +72,8 @@ class _MenuItemTile extends StatelessWidget {
             ),
           ),
         ),
-        title: Text(item.name, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-        subtitle: Text('${item.category} - ₹${item.price}', style: theme.textTheme.bodyMedium),
+        title: Text(item.name, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: Colors.white)),
+        subtitle: Text('${item.category} - ₹${item.price}', style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70)),
         trailing: IconButton(
           tooltip: 'Delete Item',
           icon: const Icon(Icons.delete_outline, color: Colors.redAccent),

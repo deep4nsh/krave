@@ -137,6 +137,23 @@ class FirestoreService {
     return _db.collection('Canteens').where('approved', isEqualTo: true).snapshots().map((snap) => snap.docs.map((d) => Canteen.fromMap(d.id, d.data())).toList());
   }
 
+  Future<void> revokeCanteenApproval(String canteenId, String ownerId) async {
+    // 1. Delete the canteen
+    await _db.collection('Canteens').doc(canteenId).delete();
+
+    // 2. Reset owner status
+    await _db.collection('Owners').doc(ownerId).update({
+      'status': 'pending',
+      'canteen_id': null,
+      'revokedAt': FieldValue.serverTimestamp(),
+    });
+
+    // 3. Reset user role
+    await _db.collection('Users').doc(ownerId).update({
+      'role': 'pendingOwner'
+    });
+  }
+
   Future<void> updateCanteenTimings(String canteenId, String openTime, String closeTime) async {
     await _db.collection('Canteens').doc(canteenId).update({
       'opening_time': openTime,

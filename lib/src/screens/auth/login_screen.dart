@@ -181,7 +181,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text("Don't have an account? ", style: textTheme.bodyMedium),
+                        Text("Don't have an account? ", style: textTheme.bodyMedium?.copyWith(color: Colors.white70)),
                         GestureDetector(
                           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UserSignupScreen())),
                           child: Text(

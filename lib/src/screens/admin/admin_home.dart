@@ -4,6 +4,7 @@ import '../../services/auth_service.dart';
 import '../../widgets/gradient_background.dart';
 import '../auth/login_screen.dart';
 import 'owner_approval_screen.dart';
+import 'manage_canteens.dart';
 
 class AdminHome extends StatelessWidget {
   const AdminHome({super.key});
@@ -48,6 +49,13 @@ class AdminHome extends StatelessWidget {
               subtitle: 'Approve or reject new canteen owners.',
               icon: Icons.how_to_reg,
               route: OwnerApprovalScreen(),
+            ),
+            SizedBox(height: 16),
+            _AnimatedAdminTaskCard(
+              title: 'Manage Canteens',
+              subtitle: 'View and revoke approved canteens.',
+              icon: Icons.store,
+              route: ManageCanteensScreen(),
             ),
             // Add other admin tasks here as needed
           ],

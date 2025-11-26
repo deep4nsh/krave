@@ -12,8 +12,15 @@ import '../../widgets/skeleton_canteen_card.dart';
 import '../../widgets/glass_container.dart';
 import '../../widgets/restaurant_card.dart';
 
-class UserHome extends StatelessWidget {
+class UserHome extends StatefulWidget {
   const UserHome({super.key});
+
+  @override
+  State<UserHome> createState() => _UserHomeState();
+}
+
+class _UserHomeState extends State<UserHome> {
+  String _searchQuery = '';
 
   Future<void> _logout(BuildContext context) async {
     final navigator = Navigator.of(context);
@@ -25,7 +32,7 @@ class UserHome extends StatelessWidget {
         (route) => false,
       );
     } catch (e) {
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Logout failed: $e')),
         );
@@ -73,6 +80,7 @@ class UserHome extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   opacity: 0.1,
                   child: TextField(
+                    onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
                     decoration: InputDecoration(
                       hintText: 'Search for food or restaurants...',
                       prefixIcon: Icon(Icons.search, color: theme.colorScheme.onSurface.withOpacity(0.5)),
@@ -104,10 +112,15 @@ class UserHome extends StatelessWidget {
                     child: Center(child: Text('Error: ${snap.error}')),
                   );
                 }
-                final canteens = snap.data ?? [];
+                
+                final allCanteens = snap.data ?? [];
+                final canteens = allCanteens.where((c) {
+                  return c.name.toLowerCase().contains(_searchQuery);
+                }).toList();
+
                 if (canteens.isEmpty) {
                   return const SliverFillRemaining(
-                    child: Center(child: Text('No approved canteens available right now.')),
+                    child: Center(child: Text('No canteens found.')),
                   );
                 }
                 

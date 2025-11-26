@@ -153,12 +153,12 @@ class _StatCard extends StatelessWidget {
               children: [
                 Text(
                   value,
-                  style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+                  style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold, color: Colors.white),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   title,
-                  style: theme.textTheme.bodyMedium,
+                  style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
                 ),
               ],
             ),
@@ -173,56 +173,94 @@ class _TimePickerCard extends StatelessWidget {
   final String canteenId;
   const _TimePickerCard({required this.canteenId});
 
-  Future<void> _selectTime(BuildContext context, bool isOpeningTime) async {
-    final TimeOfDay? picked = await showTimePicker(
+  Future<void> _showEditTimingsDialog(BuildContext context) async {
+    TimeOfDay? openingTime;
+    TimeOfDay? closingTime;
+
+    await showDialog(
       context: context,
-      initialTime: TimeOfDay.now(),
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Canteen Timings', style: TextStyle(color: Colors.white)),
+        content: StatefulBuilder(
+          builder: (context, setState) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: const Text('Opening Time', style: TextStyle(color: Colors.white)),
+                trailing: Text(openingTime?.format(context) ?? 'Select', style: const TextStyle(color: Colors.white70)),
+                onTap: () async {
+                  final time = await showTimePicker(context: context, initialTime: const TimeOfDay(hour: 9, minute: 0));
+                  if (time != null) setState(() => openingTime = time);
+                },
+              ),
+              ListTile(
+                title: const Text('Closing Time', style: TextStyle(color: Colors.white)),
+                trailing: Text(closingTime?.format(context) ?? 'Select', style: const TextStyle(color: Colors.white70)),
+                onTap: () async {
+                  final time = await showTimePicker(context: context, initialTime: const TimeOfDay(hour: 17, minute: 0));
+                  if (time != null) setState(() => closingTime = time);
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              if (openingTime != null && closingTime != null) {
+                await context.read<FirestoreService>().updateCanteenTimings(
+                  canteenId,
+                  openingTime!.format(context),
+                  closingTime!.format(context),
+                );
+                if (context.mounted) Navigator.pop(context);
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
     );
-    if (picked != null) {
-      final fs = context.read<FirestoreService>();
-      final formattedTime = picked.format(context);
-      if (isOpeningTime) {
-        fs.updateCanteenTimings(canteenId, formattedTime, ' ');
-      } else {
-        fs.updateCanteenTimings(canteenId, ' ', formattedTime);
-      }
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    theme.colorScheme.primary.withOpacity(0.25),
-                    Colors.transparent,
+      child: InkWell(
+        onTap: () => _showEditTimingsDialog(context),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      theme.colorScheme.primary.withOpacity(0.25),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+                child: Icon(Icons.access_time_filled_rounded, size: 36, color: theme.colorScheme.primary),
+              ),
+              const SizedBox(width: 20),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Manage Timings', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.white)),
+                    const SizedBox(height: 4),
+                    Text('Tap to set opening & closing hours', style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70)),
                   ],
                 ),
               ),
-              child: Icon(Icons.access_time_filled_rounded, size: 36, color: theme.colorScheme.primary),
-            ),
-            const SizedBox(width: 20),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Manage Timings', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  Text('Set your canteen hours', style: theme.textTheme.bodyMedium),
-                ],
-              ),
-            ),
-            IconButton(onPressed: () => _selectTime(context, true), icon: const Icon(Icons.edit)),
-          ],
+              const Icon(Icons.edit, color: Colors.white),
+            ],
+          ),
         ),
       ),
     );

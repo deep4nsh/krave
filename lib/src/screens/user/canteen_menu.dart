@@ -270,12 +270,12 @@ class MenuItemCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   item.name,
-                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: Colors.white),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '₹${item.price}',
-                  style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.onSurface),
+                  style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -383,9 +383,12 @@ class QuantityStepper extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          ScaleButton(
-            onPressed: () => cart.removeSingleItem(item.id),
-            child: Icon(Icons.remove, color: theme.colorScheme.primary, size: 20),
+          InkWell(
+            onTap: () => cart.removeSingleItem(item.id),
+            child: Padding(
+              padding: const EdgeInsets.all(4.0),
+              child: Icon(Icons.remove, color: theme.colorScheme.primary, size: 20),
+            ),
           ),
           SizedBox(
             width: 30,
@@ -398,9 +401,12 @@ class QuantityStepper extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
           ),
-          ScaleButton(
-            onPressed: () => cart.addItem(MenuItemModel(id: item.id, name: item.name, price: item.price, category: item.category)),
-            child: Icon(Icons.add, color: theme.colorScheme.primary, size: 20),
+          InkWell(
+            onTap: () => cart.addItem(MenuItemModel(id: item.id, name: item.name, price: item.price, category: item.category)),
+            child: Padding(
+              padding: const EdgeInsets.all(4.0),
+              child: Icon(Icons.add, color: theme.colorScheme.primary, size: 20),
+            ),
           ),
         ],
       ),
