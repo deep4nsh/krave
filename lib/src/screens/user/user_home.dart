@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
@@ -11,6 +11,7 @@ import 'order_history.dart';
 import '../../widgets/skeleton_canteen_card.dart';
 import '../../widgets/glass_container.dart';
 import '../../widgets/restaurant_card.dart';
+import '../../widgets/developer_note_dialog.dart';
 
 class UserHome extends StatefulWidget {
   const UserHome({super.key});
@@ -56,6 +57,16 @@ class _UserHomeState extends State<UserHome> {
               backgroundColor: Colors.transparent,
               elevation: 0,
               actions: [
+                IconButton(
+                  icon: const Icon(Icons.info_outline),
+                  tooltip: 'About Developer',
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => const DeveloperNoteDialog(),
+                    );
+                  },
+                ),
                 IconButton(
                   icon: const Icon(Icons.history_edu),
                   tooltip: 'Order History',
