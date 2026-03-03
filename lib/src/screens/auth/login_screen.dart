@@ -8,6 +8,9 @@ import '../auth/user_signup.dart';
 import '../user/user_home.dart';
 import '../owner/owner_home.dart';
 import '../owner/waiting_approval_screen.dart';
+import '../../widgets/krave_button.dart';
+import '../../widgets/krave_textfield.dart';
+import '../../widgets/glass_container.dart';
 import '../../widgets/scale_button.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -88,6 +91,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -109,14 +113,20 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                     Icon(Icons.fastfood, size: 60, color: colorScheme.primary), // FIXED: Get color from theme
                     const SizedBox(height: 16),
                     Text(
-                      'Welcome to Krave',
+                      'Search. Order. Eat.',
                       textAlign: TextAlign.center,
-                      style: textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                      style: textTheme.headlineMedium?.copyWith(
+                        color: Colors.white,
+                        letterSpacing: -0.5,
+                      ),
                     ),
+                    const SizedBox(height: 8),
                     Text(
-                      'Sign in to continue',
+                      'Experience food like never before',
                       textAlign: TextAlign.center,
-                      style: textTheme.bodyMedium,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: Colors.white.withOpacity(0.5),
+                      ),
                     ),
                     const SizedBox(height: 40),
 
@@ -127,54 +137,34 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                         key: _formKey,
                         child: Column(
                           children: [
-                            TextFormField(
-                              decoration: const InputDecoration(labelText: 'Email'),
+                            KraveTextField(
+                              label: 'Email',
+                              hintText: 'Enter your email',
+                              prefixIcon: Icons.email_outlined,
                               keyboardType: TextInputType.emailAddress,
-                              validator: (v) => v!.isEmpty || !v.contains('@') ? 'Enter a valid email' : null,
-                              onSaved: (v) => _email = v!,
+                              onChanged: (v) => _email = v,
                             ),
-                            const SizedBox(height: 16),
-                            TextFormField(
+                            const SizedBox(height: 20),
+                            KraveTextField(
+                              label: 'Password',
+                              hintText: '••••••••',
+                              prefixIcon: Icons.lock_outline,
                               obscureText: true,
-                              decoration: const InputDecoration(labelText: 'Password'),
-                              validator: (v) => v!.isEmpty ? 'Please enter your password' : null,
-                              onSaved: (v) => _password = v!,
+                              onChanged: (v) => _password = v,
                             ),
                           ],
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 32),
 
                     // Login Button
-                    _loading
-                        ? const Center(child: CircularProgressIndicator())
-                        : ScaleButton(
-                            onPressed: _login,
-                            child: Container(
-                              height: 52,
-                              width: double.infinity,
-                              decoration: BoxDecoration(
-                                color: colorScheme.primary,
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: colorScheme.primary.withOpacity(0.3),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                'Login',
-                                style: textTheme.titleMedium?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
+                    KraveButton(
+                      text: 'Login',
+                      isLoading: _loading,
+                      onPressed: _login,
+                      icon: Icons.login_rounded,
+                    ),
                     const SizedBox(height: 20),
 
                     // Registration Link

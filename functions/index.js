@@ -1,4 +1,4 @@
-const functions = require("firebase-functions");
+const functions = require("firebase-functions/v1");
 const admin = require("firebase-admin");
 const Razorpay = require("razorpay");
 const crypto = require("crypto");
@@ -111,3 +111,4 @@ exports.confirmRazorpayPayment = functions.https.onCall(async (data, context) =>
   }
   // ... (rest of the function)
 });
+

@@ -6,6 +6,7 @@ import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../services/pdf_invoice_service.dart';
 import '../../widgets/gradient_background.dart';
+import '../../widgets/glass_container.dart';
 import 'order_tracking.dart';
 
 class OrderHistoryScreen extends StatelessWidget {
@@ -120,57 +121,118 @@ class _OrderHistoryCard extends StatelessWidget {
     final theme = Theme.of(context);
     final invoiceService = PdfInvoiceService();
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      clipBehavior: Clip.antiAlias,
+    Color statusColor;
+    switch (order.status) {
+      case 'Completed': statusColor = Colors.greenAccent; break;
+      case 'Cancelled': statusColor = Colors.redAccent; break;
+      case 'Preparing': statusColor = Colors.orangeAccent; break;
+      case 'Pending': statusColor = theme.colorScheme.primary; break;
+      default: statusColor = theme.colorScheme.primary;
+    }
+
+    return GlassContainer(
+      margin: const EdgeInsets.only(bottom: 20),
+      borderRadius: BorderRadius.circular(24),
+      opacity: 0.05,
       child: InkWell(
         onTap: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => OrderTracking(orderId: order.id)),
         ),
+        borderRadius: BorderRadius.circular(24),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(20.0),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Flexible(
-                    child: Text(
-                      'Token #${order.tokenNumber}', 
-                      style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                      overflow: TextOverflow.ellipsis,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Token #${order.tokenNumber}',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        DateFormat('MMM dd, yyyy • hh:mm a').format(order.timestamp),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface.withOpacity(0.5),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: statusColor.withOpacity(0.2)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(_getStatusIcon(order.status), color: statusColor, size: 14),
+                        const SizedBox(width: 8),
+                        Text(
+                          order.status.toUpperCase(),
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: statusColor,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Text(DateFormat.yMMMd().format(order.timestamp), style: theme.textTheme.bodyMedium),
                 ],
               ),
-              const Divider(height: 20),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: Divider(height: 1, thickness: 1, color: Colors.white10),
+              ),
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Icon(_getStatusIcon(order.status), color: theme.colorScheme.primary, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      order.status, 
-                      style: theme.textTheme.bodyLarge,
-                      overflow: TextOverflow.ellipsis,
+                   Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Total Amount',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface.withOpacity(0.5),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '₹${order.totalAmount}',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(
+                    height: 44,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        side: BorderSide(color: theme.colorScheme.primary.withOpacity(0.3)),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                      ),
+                      icon: const Icon(Icons.description_outlined, size: 18),
+                      label: const Text('Invoice'),
+                      onPressed: () => invoiceService.saveAsPdf(order),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Text('₹${order.totalAmount}', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: Colors.white)),
                 ],
               ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  icon: const Icon(Icons.download_rounded),
-                  label: const Text('Download Invoice'),
-                  onPressed: () => invoiceService.saveAsPdf(order),
-                ),
-              )
             ],
           ),
         ),

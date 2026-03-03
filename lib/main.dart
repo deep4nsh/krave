@@ -51,104 +51,95 @@ class KraveApp extends StatelessWidget {
         primary: primaryColor,
         background: backgroundColor,
         surface: surfaceColor,
-        onPrimary: Colors.white, // Text on top of primary-colored elements (e.g., buttons)
+        onPrimary: Colors.black, // Darker text on yellow buttons for better contrast
         onBackground: textColor,
         onSurface: textColor,
-        error: Colors.redAccent,
+        error: Color(0xFFE63946),
         onError: Colors.white,
-        secondary: secondaryTextColor, // Added for consistency
+        secondary: secondaryTextColor,
       ),
 
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.transparent, // Make AppBar transparent to show body gradient
+      appBarTheme: AppBarTheme(
+        backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: TextStyle(
+        titleTextStyle: GoogleFonts.outfit(
           color: textColor,
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
+          fontSize: 22,
+          fontWeight: FontWeight.bold,
         ),
-        iconTheme: IconThemeData(color: primaryColor), // Style for back buttons, etc.
+        iconTheme: const IconThemeData(color: primaryColor),
       ),
 
-      inputDecorationTheme: const InputDecorationTheme(
+      inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: surfaceColor,
-        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        fillColor: surfaceColor.withOpacity(0.5),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide.none, // No border by default
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
+          borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-          borderSide: BorderSide(color: primaryColor, width: 2), // Highlight when focused
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: primaryColor.withOpacity(0.5), width: 1.5),
         ),
-        labelStyle: TextStyle(color: secondaryTextColor),
-        hintStyle: TextStyle(color: secondaryTextColor),
+        labelStyle: TextStyle(color: textColor.withOpacity(0.6)),
+        hintStyle: TextStyle(color: textColor.withOpacity(0.3)),
       ),
 
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          minimumSize: const Size.fromHeight(52),
+          minimumSize: const Size.fromHeight(56),
           backgroundColor: primaryColor,
-          foregroundColor: Colors.white, // Text color on the button
+          foregroundColor: Colors.black,
+          elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
           ),
-          textStyle: const TextStyle(
+          textStyle: GoogleFonts.outfit(
             fontSize: 16,
             fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
           ),
         ),
       ),
       
       cardTheme: CardThemeData(
-        elevation: 4,
+        elevation: 0,
         color: surfaceColor,
+        margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16.0),
+          borderRadius: BorderRadius.circular(20),
         ),
       ),
 
-      snackBarTheme: const SnackBarThemeData(
+      snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         backgroundColor: surfaceColor,
         contentTextStyle: TextStyle(color: textColor),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
+          borderRadius: BorderRadius.circular(12),
         ),
       ),
       
-      textTheme: GoogleFonts.outfitTextTheme(
-        Theme.of(context).textTheme,
-      ).copyWith(
-        headlineSmall: GoogleFonts.outfit(
-          color: textColor, 
-          fontWeight: FontWeight.w600,
-        ),
-        titleLarge: GoogleFonts.outfit(
-          color: textColor, 
-          fontWeight: FontWeight.w600,
-        ),
-        bodyLarge: GoogleFonts.outfit(
-          color: textColor, 
-          height: 1.5,
-        ),
-        bodyMedium: GoogleFonts.outfit(
-          color: secondaryTextColor, 
-          height: 1.5,
-        ),
+      textTheme: GoogleFonts.outfitTextTheme().copyWith(
+        headlineLarge: GoogleFonts.outfit(color: textColor, fontWeight: FontWeight.bold, fontSize: 32),
+        headlineMedium: GoogleFonts.outfit(color: textColor, fontWeight: FontWeight.bold, fontSize: 24),
+        titleLarge: GoogleFonts.outfit(color: textColor, fontWeight: FontWeight.bold, fontSize: 20),
+        titleMedium: GoogleFonts.outfit(color: textColor, fontWeight: FontWeight.w600, fontSize: 16),
+        bodyLarge: GoogleFonts.outfit(color: textColor, fontSize: 16),
+        bodyMedium: GoogleFonts.outfit(color: secondaryTextColor, fontSize: 14),
       ),
 
-      // DEFINITIVE FIX: Use TabBarThemeData instead of TabBarTheme
       tabBarTheme: const TabBarThemeData(
         indicatorColor: primaryColor,
         labelColor: primaryColor,
         unselectedLabelColor: secondaryTextColor,
+        indicatorSize: TabBarIndicatorSize.label,
       ),
     );
 

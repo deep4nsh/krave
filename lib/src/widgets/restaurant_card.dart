@@ -142,194 +142,205 @@ class RestaurantCard extends StatelessWidget {
     final user = context.watch<AuthService>().currentUser;
     final isOwner = user?.uid == canteen.ownerId;
     
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 24),
-      clipBehavior: Clip.antiAlias,
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => CanteenMenu(canteen: canteen)),
-          );
-        },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image Section
-            SizedBox(
-              height: 180,
-              width: double.infinity,
-              child: Stack(
-                children: [
-                  CachedNetworkImage(
-                    imageUrl: 'https://loremflickr.com/640/360/food,restaurant/all?lock=${canteen.id.hashCode}',
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    height: double.infinity,
-                    placeholder: (context, url) => Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            theme.colorScheme.primary.withOpacity(0.8),
-                            theme.colorScheme.secondary.withOpacity(0.6),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => CanteenMenu(canteen: canteen)),
+            );
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Image Section with stacked glass effect
+              SizedBox(
+                height: 200,
+                width: double.infinity,
+                child: Stack(
+                  children: [
+                    CachedNetworkImage(
+                      imageUrl: 'https://loremflickr.com/640/360/food,restaurant/all?lock=${canteen.id.hashCode}',
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                      placeholder: (context, url) => Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              theme.colorScheme.surface,
+                              theme.colorScheme.background,
+                            ],
+                          ),
+                        ),
+                        child: const Center(child: CircularProgressIndicator()),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        color: theme.colorScheme.surface,
+                        child: const Center(child: Icon(Icons.broken_image)),
+                      ),
+                    ),
+                    // Gradient Overlay
+                    Positioned.fill(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.transparent,
+                              Colors.transparent,
+                              Colors.black.withOpacity(0.8),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Glass Label for Status
+                    Positioned(
+                      top: 16,
+                      left: 16,
+                      child: GlassContainer(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        borderRadius: BorderRadius.circular(10),
+                        opacity: 0.2,
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                color: Colors.greenAccent,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'OPEN',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1,
+                              ),
+                            ),
                           ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                      ),
-                      child: Center(
-                        child: Icon(
-                          Icons.store_mall_directory,
-                          size: 64,
-                          color: Colors.white.withOpacity(0.8),
                         ),
                       ),
                     ),
-                    errorWidget: (context, url, error) => Container(
-                      color: Colors.grey[800],
-                      child: const Center(child: Icon(Icons.broken_image, color: Colors.white)),
-                    ),
-                  ),
-                  // Gradient Overlay for text readability
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withOpacity(0.7),
+                    if (isOwner)
+                      Positioned(
+                        top: 16,
+                        right: 16,
+                        child: GlassContainer(
+                          borderRadius: BorderRadius.circular(12),
+                          opacity: 0.2,
+                          child: IconButton(
+                            icon: const Icon(Icons.edit_note_rounded, color: Colors.white),
+                            onPressed: () => _showEditTimingsDialog(context),
+                            tooltip: 'Edit Timings',
+                          ),
+                        ),
+                      ),
+                    // Bottom info on image
+                    Positioned(
+                      bottom: 16,
+                      left: 16,
+                      right: 16,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '4.5',
+                                  style: theme.textTheme.labelLarge?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            '20-30 min',
+                            style: theme.textTheme.labelLarge?.copyWith(
+                              color: Colors.white.withOpacity(0.8),
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                  ),
-                  if (isOwner)
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.white),
-                        onPressed: () => _showEditTimingsDialog(context),
-                        tooltip: 'Edit Timings',
-                        style: IconButton.styleFrom(
-                          backgroundColor: Colors.black54,
-                        ),
+                  ],
+                ),
+              ),
+              
+              // Content Section
+              Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      canteen.name,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                ],
-              ),
-            ),
-            
-            // Info Section
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Name and Rating Row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          canteen.name,
-                          style: GoogleFonts.outfit(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.onSurface,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(Icons.location_on_rounded, size: 14, color: theme.colorScheme.primary.withOpacity(0.7)),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Canteen Area • 1.2km away',
+                          style: theme.textTheme.bodyMedium,
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    // Dynamic Promo Badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.green,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Row(
-                          children: [
-                            const Text(
-                              '4.2', // Hardcoded rating for now
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                            const SizedBox(width: 2),
-                            const Icon(Icons.star, size: 12, color: Colors.white),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  
-                  // Meta Info Row (Time, Delivery)
-                  Row(
-                    children: [
-                      Icon(Icons.access_time, size: 14, color: theme.colorScheme.secondary),
-                      const SizedBox(width: 4),
-                      Text(
-                        canteen.openingTime != null 
-                            ? '${canteen.openingTime} - ${canteen.closingTime}' 
-                            : 'Timings not set',
-                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.secondary),
-                      ),
-                      const SizedBox(width: 12),
-                      const Icon(Icons.delivery_dining, size: 14, color: Colors.green),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Free Delivery',
-                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.secondary),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  
-                  // Dotted Divider
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      return Flex(
-                        direction: Axis.horizontal,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: List.generate(
-                          (constraints.constrainWidth() / 10).floor(),
-                          (_) => SizedBox(
-                            width: 5,
-                            height: 1,
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(color: theme.dividerColor),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.local_offer_rounded, size: 16, color: theme.colorScheme.primary),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Flat 50% OFF up to ₹100',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  
-                  // Offers Section
-                  Row(
-                    children: [
-                      const Icon(Icons.local_offer, size: 16, color: Colors.blueAccent),
-                      const SizedBox(width: 8),
-                      Text(
-                        '60% OFF up to ₹120',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.secondary,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        ],
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

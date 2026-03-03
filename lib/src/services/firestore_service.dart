@@ -22,13 +22,21 @@ class FirestoreService {
   }
 
   Future<String> getUserRole(String uid) async {
-    final adminDoc = await _db.collection('Admins').doc(uid).get();
-    if (adminDoc.exists) return 'admin';
+    try {
+      final adminDoc = await _db.collection('Admins').doc(uid).get();
+      if (adminDoc.exists) return 'admin';
+    } catch (_) {
+      // Ignore permission errors, just move to the next check
+    }
 
-    final ownerDoc = await _db.collection('Owners').doc(uid).get();
-    if (ownerDoc.exists) {
-      final status = ownerDoc.data()?['status'] ?? 'pending';
-      return status == 'approved' ? 'approvedOwner' : 'pendingOwner';
+    try {
+      final ownerDoc = await _db.collection('Owners').doc(uid).get();
+      if (ownerDoc.exists) {
+        final status = ownerDoc.data()?['status'] ?? 'pending';
+        return status == 'approved' ? 'approvedOwner' : 'pendingOwner';
+      }
+    } catch (_) {
+      // Ignore permission errors
     }
 
     final userDoc = await _db.collection('Users').doc(uid).get();
@@ -38,19 +46,24 @@ class FirestoreService {
   }
 
   Future<void> updateUserFCMToken(String uid, String token) async {
-    final userDoc = _db.collection('Users').doc(uid);
-    final ownerDoc = _db.collection('Owners').doc(uid);
-    final adminDoc = _db.collection('Admins').doc(uid);
-
     final data = {'fcmToken': token};
+    
+    // Try updating in each collection, stopping once successful.
+    // This is more resilient to permission issues than checking .exists first.
+    try {
+      await _db.collection('Users').doc(uid).update(data);
+      return;
+    } catch (_) {}
 
-    if ((await userDoc.get()).exists) {
-      await userDoc.update(data);
-    } else if ((await ownerDoc.get()).exists) {
-      await ownerDoc.update(data);
-    } else if ((await adminDoc.get()).exists) {
-      await adminDoc.update(data);
-    }
+    try {
+      await _db.collection('Owners').doc(uid).update(data);
+      return;
+    } catch (_) {}
+
+    try {
+      await _db.collection('Admins').doc(uid).update(data);
+      return;
+    } catch (_) {}
   }
 
   Future<void> addOwner(String uid, String name, String email, String canteenName) async {

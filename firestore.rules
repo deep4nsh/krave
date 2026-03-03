@@ -30,19 +30,19 @@ service cloud.firestore {
     
     // Admins collection
     match /Admins/{adminId} {
-      // Only admins can read the list of other admins.
-      allow read: if isAdmin();
-      // Only admins can create or modify admin documents.
-      allow write: if isAdmin();
+      // Allows user to check if they are an admin during login.
+      allow get: if isUser(adminId);
+      // Only admins can list or write admin documents.
+      allow list, write: if isAdmin();
     }
     
     // Owners collection
     match /Owners/{ownerId} {
+      // Allows user to check their own application status.
+      allow get: if isUser(ownerId) || isAdmin();
       // A user can create their own owner application.
       allow create: if isUser(ownerId);
-      // An authenticated user can check if an owner document exists (e.g., for status).
-      allow get: if isAuthenticated();
-      // Only admins can list or update owner documents (e.g., for approval).
+      // Only admins can list or update owner documents.
       allow list, update: if isAdmin();
     }
     

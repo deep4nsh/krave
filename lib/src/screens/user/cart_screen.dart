@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import '../../models/canteen_model.dart';
@@ -97,39 +98,98 @@ class _CartScreenState extends State<CartScreen> {
       appBar: AppBar(title: const Text('Your Cart')),
       body: GradientBackground(
         child: _isProcessing
-            ? const Center(
+            ? Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 20),
-                    Text('Processing Payment...', style: TextStyle(fontSize: 16)),
+                    const CircularProgressIndicator(strokeWidth: 2),
+                    const SizedBox(height: 32),
+                    Text(
+                      'Securing your meal...',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Processing payment safely',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurface.withOpacity(0.5),
+                      ),
+                    ),
                   ],
                 ),
               )
             : CustomScrollView(
+                physics: const BouncingScrollPhysics(),
                 slivers: [
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 100, 16, 16),
-                    sliver: SliverList(delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final item = cart.items.values.toList()[index];
-                        return _CartItemTile(item: item);
-                      },
-                      childCount: cart.items.length,
-                    )),
+                  SliverAppBar(
+                    pinned: true,
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    title: Text(
+                      'Your Cart',
+                      style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                    ),
                   ),
-                  SliverToBoxAdapter(child: _BillDetailsCard(cart: cart)),
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final item = cart.items.values.toList()[index];
+                          return _CartItemTile(item: item);
+                        },
+                        childCount: cart.items.length,
+                      ),
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: _BillDetailsCard(cart: cart),
+                    ),
+                  ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 120)),
                 ],
               ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: cart.items.isEmpty || _isProcessing
           ? null
-          : FloatingActionButton.extended(
-              onPressed: _checkout,
-              label: const Text('PAY & PLACE ORDER'),
-              icon: const Icon(Icons.payment),
+          : Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: SizedBox(
+                width: double.infinity,
+                height: 60,
+                child: ElevatedButton(
+                  onPressed: _checkout,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                    elevation: 8,
+                    shadowColor: theme.colorScheme.primary.withOpacity(0.4),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.lock_outline_rounded, size: 20),
+                      const SizedBox(width: 12),
+                      Text(
+                        'PAY ₹${cart.totalAmount.toStringAsFixed(0)}',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
     );
   }
@@ -142,21 +202,57 @@ class _CartItemTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Row(
-          children: [
-            Text('${item.quantity}x', style: theme.textTheme.titleLarge?.copyWith(color: theme.colorScheme.primary)),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(item.name, style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white)),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
             ),
-            const SizedBox(width: 16),
-            Text('₹${item.price * item.quantity}', style: theme.textTheme.titleMedium?.copyWith(color: Colors.white)),
-          ],
-        ),
+            child: Text(
+              '${item.quantity}x',
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.name,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  'Customized',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withOpacity(0.4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            '₹${item.price * item.quantity}',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -169,41 +265,76 @@ class _BillDetailsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
-      margin: const EdgeInsets.all(16),
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('Bill Details', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-            const Divider(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Item Total', style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white)),
-                Text('₹${cart.totalAmount.toStringAsFixed(2)}', style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white)),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Taxes & Charges', style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white)),
-                Text('₹0.00', style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white)),
-              ],
-            ),
-            const Divider(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Grand Total', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, color: Colors.white)),
-                Text('₹${cart.totalAmount.toStringAsFixed(2)}', style: theme.textTheme.headlineSmall?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.bold)),
-              ],
-            ),
-          ],
-        ),
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
       ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Bill Details',
+            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 20),
+          _BillRow(label: 'Item Total', value: '₹${cart.totalAmount.toStringAsFixed(2)}'),
+          const SizedBox(height: 12),
+          _BillRow(label: 'Delivery Fee', value: 'FREE', isGreen: true),
+          const SizedBox(height: 12),
+          _BillRow(label: 'Platform Fee', value: '₹2.00'),
+          const Divider(height: 40, thickness: 1, color: Colors.white10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'To Pay',
+                style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              Text(
+                '₹${(cart.totalAmount + 2).toStringAsFixed(2)}',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BillRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool isGreen;
+
+  const _BillRow({required this.label, required this.value, this.isGreen = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: theme.textTheme.bodyLarge?.copyWith(
+            color: theme.colorScheme.onSurface.withOpacity(0.6),
+          ),
+        ),
+        Text(
+          value,
+          style: theme.textTheme.bodyLarge?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: isGreen ? Colors.greenAccent : theme.colorScheme.onSurface,
+          ),
+        ),
+      ],
     );
   }
 }

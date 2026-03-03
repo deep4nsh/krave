@@ -40,26 +40,47 @@ class _CanteenMenuState extends State<CanteenMenu> {
         child: CustomScrollView(
           slivers: [
             SliverAppBar(
+              expandedHeight: 220.0,
               pinned: true,
-              expandedHeight: 150.0,
+              stretch: true,
               backgroundColor: Colors.transparent,
               elevation: 0,
               flexibleSpace: FlexibleSpaceBar(
+                stretchModes: const [
+                  StretchMode.zoomBackground,
+                  StretchMode.blurBackground,
+                ],
                 title: Text(
                   widget.canteen.name,
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
-                ),
-                background: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.black.withOpacity(0.7),
-                        Colors.transparent,
-                      ],
-                    ),
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                    color: Colors.white,
+                    shadows: [
+                      Shadow(color: Colors.black.withOpacity(0.5), blurRadius: 10),
+                    ],
                   ),
+                ),
+                background: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    CachedNetworkImage(
+                      imageUrl: 'https://loremflickr.com/640/360/food,restaurant/all?lock=${widget.canteen.id.hashCode}',
+                      fit: BoxFit.cover,
+                    ),
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withOpacity(0.3),
+                            Colors.black.withOpacity(0.8),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -127,14 +148,12 @@ class FloatingCartBar extends StatelessWidget {
     final cart = context.watch<CartProvider>();
     final theme = Theme.of(context);
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      width: double.infinity,
-      height: 60,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: GlassContainer(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24),
         color: theme.colorScheme.primary,
-        opacity: 0.9,
+        opacity: 0.95,
         child: InkWell(
           onTap: () {
             Navigator.push(
@@ -142,36 +161,49 @@ class FloatingCartBar extends StatelessWidget {
               MaterialPageRoute(builder: (_) => CartScreen(canteen: canteen)),
             );
           },
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(24),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                Row(
                   children: [
-                    Text(
-                      '${cart.totalQuantity} ITEMS',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
                       ),
+                      child: const Icon(Icons.shopping_basket_rounded, color: Colors.white, size: 20),
                     ),
-                    Text(
-                      '₹${cart.totalAmount}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
+                    const SizedBox(width: 12),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${cart.totalQuantity} items',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                        ),
+                        Text(
+                          '₹${cart.totalAmount}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-                Row(
-                  children: const [
+                const Row(
+                  children: [
                     Text(
                       'View Cart',
                       style: TextStyle(
@@ -181,7 +213,7 @@ class FloatingCartBar extends StatelessWidget {
                       ),
                     ),
                     SizedBox(width: 8),
-                    Icon(Icons.shopping_cart_checkout, color: Colors.white, size: 20),
+                    Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
                   ],
                 ),
               ],
@@ -244,114 +276,138 @@ class MenuItemCard extends StatelessWidget {
     final cartItem = cart.items[item.id];
     final theme = Theme.of(context);
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Left Side: Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Veg/Non-veg Icon
-                Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: item.isVeg ? Colors.green : Colors.red, width: 1),
-                    borderRadius: BorderRadius.circular(4),
+    return GlassContainer(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      borderRadius: BorderRadius.circular(24),
+      opacity: 0.05,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Left Side: Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: item.isVeg ? Colors.green : Colors.red, width: 1.5),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Icon(
+                          Icons.circle,
+                          size: 6,
+                          color: item.isVeg ? Colors.green : Colors.red,
+                        ),
+                      ),
+                      if (item.category != null) ...[
+                        const SizedBox(width: 8),
+                        Text(
+                          item.category!.toUpperCase(),
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.primary.withOpacity(0.7),
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                  child: Icon(
-                    Icons.circle,
-                    size: 8,
-                    color: item.isVeg ? Colors.green : Colors.red,
+                  const SizedBox(height: 12),
+                  Text(
+                    item.name,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  item.name,
-                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '₹${item.price}',
-                  style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Delicious ${item.category?.toLowerCase() ?? 'item'} prepared with care.', // Placeholder description
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.secondary,
+                  const SizedBox(height: 4),
+                  Text(
+                    '₹${item.price}',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontSize: 20,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Chef\'s special ${item.name.toLowerCase()} prepared with fresh ingredients.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurface.withOpacity(0.4),
+                    ),
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 2,
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: 16),
-          
-          // Right Side: Image and Add Button
-          SizedBox(
-            width: 120,
-            child: Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.bottomCenter,
-              children: [
-                // Image
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: SizedBox(
-                    height: 120,
-                    width: 120,
-                    child: CachedNetworkImage(
-                      imageUrl: item.photoUrl ?? '',
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => Container(color: Colors.white10),
-                      errorWidget: (context, url, error) => Container(
-                        color: Colors.white10,
-                        child: Icon(Icons.fastfood, color: theme.colorScheme.primary.withOpacity(0.5), size: 40),
+            const SizedBox(width: 20),
+            
+            // Right Side: Image and Add Button
+            SizedBox(
+              width: 130,
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.bottomCenter,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: SizedBox(
+                      height: 130,
+                      width: 130,
+                      child: CachedNetworkImage(
+                        imageUrl: item.photoUrl ?? '',
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => Container(color: theme.colorScheme.surface),
+                        errorWidget: (context, url, error) => Container(
+                          color: theme.colorScheme.surface,
+                          child: Icon(Icons.fastfood_rounded, color: theme.colorScheme.primary.withOpacity(0.3), size: 48),
+                        ),
                       ),
                     ),
                   ),
-                ),
-                
-                // Add Button (Pill)
-                Positioned(
-                  bottom: -12,
-                  child: cartItem == null
-                      ? ScaleButton(
-                          onPressed: () => cart.addItem(item),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.surface,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: theme.colorScheme.primary.withOpacity(0.5)),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.2),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Text(
-                              'ADD',
-                              style: TextStyle(
+                  
+                  // Add Button / Stepper
+                  Positioned(
+                    bottom: -16,
+                    child: cartItem == null
+                        ? ScaleButton(
+                            onPressed: () => cart.addItem(item),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 10),
+                              decoration: BoxDecoration(
                                 color: theme.colorScheme.primary,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: theme.colorScheme.primary.withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: const Text(
+                                'ADD',
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  letterSpacing: 1,
+                                ),
                               ),
                             ),
-                          ),
-                        )
-                      : QuantityStepper(item: cartItem),
-                ),
-              ],
+                          )
+                        : QuantityStepper(item: cartItem),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -366,46 +422,52 @@ class QuantityStepper extends StatelessWidget {
     final cart = context.read<CartProvider>();
     final theme = Theme.of(context);
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: theme.colorScheme.primary),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+    return GlassContainer(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      borderRadius: BorderRadius.circular(16),
+      color: theme.colorScheme.primary,
+      opacity: 0.9,
+      boxShadow: [
+        BoxShadow(
+          color: theme.colorScheme.primary.withOpacity(0.3),
+          blurRadius: 12,
+          offset: const Offset(0, 6),
+        ),
+      ],
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          InkWell(
-            onTap: () => cart.removeSingleItem(item.id),
-            child: Padding(
-              padding: const EdgeInsets.all(4.0),
-              child: Icon(Icons.remove, color: theme.colorScheme.primary, size: 20),
+          ScaleButton(
+            onPressed: () => cart.removeSingleItem(item.id),
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.black12,
+              ),
+              child: const Icon(Icons.remove_rounded, color: Colors.black, size: 20),
             ),
           ),
           SizedBox(
-            width: 30,
+            width: 36,
             child: Text(
               item.quantity.toString(),
               style: theme.textTheme.titleMedium?.copyWith(
-                color: theme.colorScheme.primary,
+                color: Colors.black,
                 fontWeight: FontWeight.bold,
               ),
               textAlign: TextAlign.center,
             ),
           ),
-          InkWell(
-            onTap: () => cart.addItem(MenuItemModel(id: item.id, name: item.name, price: item.price, category: item.category)),
-            child: Padding(
-              padding: const EdgeInsets.all(4.0),
-              child: Icon(Icons.add, color: theme.colorScheme.primary, size: 20),
+          ScaleButton(
+            onPressed: () => cart.addItem(MenuItemModel(id: item.id, name: item.name, price: item.price, category: item.category)),
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.black26,
+              ),
+              child: const Icon(Icons.add_rounded, color: Colors.black, size: 20),
             ),
           ),
         ],

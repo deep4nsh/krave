@@ -7,19 +7,37 @@ class GradientBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
           colors: [
-            colorScheme.background, // The deep dark blue from the theme
-            colorScheme.surface,    // The slightly lighter blue for a subtle effect
+            theme.colorScheme.background,
+            theme.colorScheme.background.withBlue(40),
+            theme.colorScheme.surface,
           ],
+          stops: const [0.0, 0.6, 1.0],
         ),
       ),
-      child: child,
+      child: Stack(
+        children: [
+          Positioned(
+            top: -100,
+            right: -50,
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: theme.colorScheme.primary.withOpacity(0.05),
+              ),
+            ),
+          ),
+          child,
+        ],
+      ),
     );
   }
 }
