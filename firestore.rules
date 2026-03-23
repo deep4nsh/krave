@@ -23,9 +23,10 @@ service cloud.firestore {
              get(/databases/$(database)/documents/Owners/$(request.auth.uid)).data.canteen_id == canteenId;
     }
     
-    // Users can only read and write their own document.
+    // Users can read/write their own document. Admins can read/list all.
     match /Users/{userId} {
-      allow read, write: if isUser(userId);
+      allow read: if isUser(userId) || isAdmin();
+      allow write: if isUser(userId) || isAdmin();
     }
     
     // Admins collection
@@ -73,11 +74,13 @@ service cloud.firestore {
     
     // Orders collection
     match /Orders/{orderId} {
-      // A user can read their own order, an owner can read their canteen's orders, and admins can read any order.
-      allow read: if isAuthenticated() && 
-                     (request.auth.uid == resource.data.userId || 
-                      isAdmin() || 
-                      isOwner(resource.data.canteenId));
+      // Admins can list/read all orders (list queries cannot use resource.data).
+      // Regular users can read their own order; owners can read their canteen's orders.
+      allow list: if isAdmin();
+      allow get: if isAuthenticated() && 
+                    (request.auth.uid == resource.data.userId || 
+                     isAdmin() || 
+                     isOwner(resource.data.canteenId));
       // A user can only create an order for themselves.
       allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
       // An owner or admin can update an order (e.g., change status).
