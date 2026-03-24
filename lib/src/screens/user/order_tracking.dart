@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/order_model.dart';
+import '../../models/rider_model.dart';
 import '../../services/firestore_service.dart';
 import '../../widgets/gradient_background.dart';
 import '../../widgets/glass_container.dart';
@@ -51,7 +52,15 @@ class OrderTracking extends StatelessWidget {
                   ),
                 ),
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 32, 20, 40),
+                  padding: const EdgeInsets.fromLTRB(20, 32, 20, 0),
+                  sliver: SliverToBoxAdapter(
+                    child: order.riderId != null 
+                      ? _buildRiderInfo(context, order.riderId!, fs)
+                      : const SizedBox.shrink(),
+                  ),
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
                   sliver: SliverToBoxAdapter(
                     child: _buildOrderDetails(context, order),
                   ),
@@ -61,6 +70,60 @@ class OrderTracking extends StatelessWidget {
           },
         ),
       ),
+    );
+  }
+
+  Widget _buildRiderInfo(BuildContext context, String riderId, FirestoreService fs) {
+    final theme = Theme.of(context);
+    return StreamBuilder<RiderModel?>(
+      stream: fs.streamRider(riderId),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const SizedBox.shrink();
+        final rider = snapshot.data!;
+        
+        return GlassContainer(
+          padding: const EdgeInsets.all(20),
+          borderRadius: BorderRadius.circular(24),
+          color: Colors.green,
+          opacity: 0.1,
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.delivery_dining, color: Colors.green),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Rider Assigned',
+                      style: theme.textTheme.labelMedium?.copyWith(color: Colors.green, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      rider.name,
+                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      rider.phone,
+                      style: theme.textTheme.bodySmall?.copyWith(color: Colors.white54),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: () {}, // For future: launch caller
+                icon: const Icon(Icons.phone, color: Colors.green),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

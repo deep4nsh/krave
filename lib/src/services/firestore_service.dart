@@ -5,6 +5,7 @@ import '../models/user_model.dart';
 import '../models/canteen_model.dart';
 import '../models/menu_item_model.dart';
 import '../models/order_model.dart';
+import '../models/rider_model.dart';
 import 'package:uuid/uuid.dart';
 
 class FirestoreService {
@@ -294,5 +295,15 @@ class FirestoreService {
       'status': status,
       'updatedAt': FieldValue.serverTimestamp(),
     });
+  }
+
+  Future<RiderModel?> getRider(String uid) async {
+    final doc = await _db.collection('Riders').doc(uid).get();
+    if (!doc.exists) return null;
+    return RiderModel.fromMap(doc.id, doc.data()!);
+  }
+
+  Stream<RiderModel?> streamRider(String uid) {
+    return _db.collection('Riders').doc(uid).snapshots().map((d) => d.exists ? RiderModel.fromMap(d.id, d.data()!) : null);
   }
 }

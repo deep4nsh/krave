@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "325148399429",
+    "project_id": "krave-124",
+    "storage_bucket": "krave-124.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:325148399429:android:8043a5577416c64672102c",
+        "android_client_info": {
+          "package_name": "com.example.krave"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDjf_w0-Kfb0SGyXUA41xqPHkO4Tul6JKw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

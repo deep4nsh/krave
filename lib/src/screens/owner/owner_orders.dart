@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../models/order_model.dart';
+import '../../models/rider_model.dart';
 import '../../services/firestore_service.dart';
 
 class OwnerOrders extends StatelessWidget {
@@ -156,6 +157,33 @@ class _OrderCard extends StatelessWidget {
                 Text(DateFormat.jm().format(order.timestamp), style: theme.textTheme.bodyMedium),
               ],
             ),
+            if (order.riderId != null) ...[
+              const SizedBox(height: 8),
+              StreamBuilder<RiderModel?>(
+                stream: fs.streamRider(order.riderId!),
+                builder: (context, riderSnap) {
+                  final rider = riderSnap.data;
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.delivery_dining, size: 16, color: Colors.green),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Rider: ${rider?.name ?? 'Assigned'}',
+                          style: theme.textTheme.bodySmall?.copyWith(color: Colors.green, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
             const Divider(height: 24),
             // Item List
             ...order.items.map((item) {

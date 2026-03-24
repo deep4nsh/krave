@@ -35,10 +35,10 @@ export async function loadOrders() {
         <table>
           <thead><tr>
             <th>Token</th><th>Items</th><th>Amount</th><th>Status</th>
-            <th>Payment ID</th><th>Time</th><th>Update</th>
+            <th>Rider</th><th>Payment ID</th><th>Time</th><th>Update</th>
           </tr></thead>
           <tbody id="orders-tbody">
-            <tr><td colspan="7"><div class="page-loading"><div class="spinner"></div></div></td></tr>
+            <tr><td colspan="8"><div class="page-loading"><div class="spinner"></div></div></td></tr>
           </tbody>
         </table>
       </div>
@@ -46,12 +46,17 @@ export async function loadOrders() {
   `;
 
   let allOrders = [];
+  let ridersCache = {};
+
+  // Fetch riders to map names
+  const ridersSnap = await getDocs(collection(db, 'Riders'));
+  ridersSnap.forEach(doc => { ridersCache[doc.id] = doc.data().name || 'Unknown Rider'; });
 
   const q = query(collection(db, 'Orders'), orderBy('timestamp', 'desc'));
   const unsub = onSnapshot(q, snap => {
     allOrders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     updateCount(allOrders.length);
-    renderOrders(allOrders);
+    renderOrders(allOrders, ridersCache);
   });
   registerListener(unsub);
 
@@ -63,7 +68,7 @@ export async function loadOrders() {
       && (!status || o.status === status)
     );
     updateCount(filtered.length);
-    renderOrders(filtered);
+    renderOrders(filtered, ridersCache);
   };
 
   document.getElementById('order-search').addEventListener('input', debounce(doFilter));
@@ -90,11 +95,11 @@ function updateCount(n) {
   if (el) el.innerHTML = `<span class="badge badge-muted" style="font-size:13px;padding:5px 12px">${n} orders</span>`;
 }
 
-function renderOrders(orders) {
+function renderOrders(orders, ridersCache = {}) {
   const tbody = document.getElementById('orders-tbody');
   if (!tbody) return;
   if (!orders.length) {
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state" style="padding:40px"><div class="empty-icon">📦</div><p>No orders found</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state" style="padding:40px"><div class="empty-icon">📦</div><p>No orders found</p></div></td></tr>`;
     return;
   }
   tbody.innerHTML = orders.map(o => {
@@ -104,6 +109,11 @@ function renderOrders(orders) {
       <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-secondary);font-size:13px">${itemsText || '—'}</td>
       <td style="font-weight:700">${formatCurrency(o.totalAmount)}</td>
       <td>${statusBadge(o.status)}</td>
+      <td>
+        <div style="font-size:13px;color:var(--text-secondary)">
+          ${o.riderId ? `<span>🛵</span> ${ridersCache[o.riderId] || 'Assigned'}` : '<span style="color:var(--text-muted)">Unassigned</span>'}
+        </div>
+      </td>
       <td style="color:var(--text-muted);font-family:monospace;font-size:11px">${o.paymentId ? o.paymentId.substring(0,18)+'…' : '—'}</td>
       <td style="color:var(--text-muted);font-size:12px">${formatDate(o.timestamp)}</td>
       <td>

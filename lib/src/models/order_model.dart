@@ -11,6 +11,7 @@ class OrderModel {
   final String status;
   final DateTime timestamp;
   final String paymentId;
+  final String? riderId;
 
   OrderModel({
     required this.id,
@@ -22,6 +23,7 @@ class OrderModel {
     required this.status,
     required this.timestamp,
     required this.paymentId,
+    this.riderId,
   });
 
   factory OrderModel.fromMap(String id, Map<String, dynamic> m) {
@@ -35,6 +37,7 @@ class OrderModel {
       status: m['status'] ?? 'Pending',
       timestamp: (m['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
       paymentId: m['paymentId'] ?? '',
+      riderId: m['riderId'],
     );
   }
 
@@ -47,5 +50,6 @@ class OrderModel {
     'status': status,
     'timestamp': timestamp,
     'paymentId': paymentId,
+    'riderId': riderId,
   };
 }

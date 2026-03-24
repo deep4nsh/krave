@@ -8,6 +8,7 @@ import { loadCanteens } from './pages/canteens.js';
 import { loadUsers } from './pages/users.js';
 import { loadOrders } from './pages/orders.js';
 import { loadAnalytics } from './pages/analytics.js';
+import { loadRiders } from './pages/riders.js';
 
 // ─── Login Handler ─────────────────────────────────────────────────────────────
 import { login } from './auth.js';
@@ -71,6 +72,7 @@ function showApp(user) {
   registerRoute('users', loadUsers);
   registerRoute('orders', loadOrders);
   registerRoute('analytics', loadAnalytics);
+  registerRoute('riders', loadRiders);
 
   // Init router
   initRouter();
