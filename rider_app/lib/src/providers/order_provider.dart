@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import '../models/order_model.dart';
+import 'package:krave/src/models/order_model.dart';
 import '../services/firebase_service.dart';
 
 class OrderProvider extends ChangeNotifier {

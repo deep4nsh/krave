@@ -6,6 +6,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { registerListener, showToast, showConfirmModal, formatDateShort } from '../utils.js';
 
+import { COLLECTIONS } from '../constants.js';
+
 export async function loadApprovals() {
   const main = document.getElementById('main-content');
   main.innerHTML = `
@@ -21,7 +23,7 @@ export async function loadApprovals() {
     </div>
   `;
 
-  const q = query(collection(db, 'Owners'), where('status', '==', 'pending'));
+  const q = query(collection(db, COLLECTIONS.OWNERS), where('status', '==', 'pending'));
   const unsub = onSnapshot(q, snap => {
     const counter = document.getElementById('approvals-count');
     if (counter) {
@@ -96,12 +98,12 @@ export async function loadApprovals() {
 
 async function approveOwner(ownerId, canteenName) {
   try {
-    const ownerRef = doc(db, 'Owners', ownerId);
+    const ownerRef = doc(db, COLLECTIONS.OWNERS, ownerId);
     const ownerSnap = await getDoc(ownerRef);
     if (!ownerSnap.exists()) throw new Error('Owner not found');
 
     // 1. Create canteen
-    const canteenRef = await addDoc(collection(db, 'Canteens'), {
+    const canteenRef = await addDoc(collection(db, COLLECTIONS.CANTEENS), {
       name: canteenName,
       ownerId,
       approved: true,
@@ -118,7 +120,7 @@ async function approveOwner(ownerId, canteenName) {
     });
 
     // 3. Update Users collection
-    await updateDoc(doc(db, 'Users', ownerId), { role: 'approvedOwner' });
+    await updateDoc(doc(db, COLLECTIONS.USERS, ownerId), { role: 'approvedOwner' });
 
     showToast(`✅ ${canteenName} approved successfully!`, 'success');
   } catch (e) {
@@ -129,8 +131,8 @@ async function approveOwner(ownerId, canteenName) {
 
 async function rejectOwner(ownerId) {
   try {
-    await deleteDoc(doc(db, 'Owners', ownerId));
-    await deleteDoc(doc(db, 'Users', ownerId));
+    await deleteDoc(doc(db, COLLECTIONS.OWNERS, ownerId));
+    await deleteDoc(doc(db, COLLECTIONS.USERS, ownerId));
     showToast('Owner rejected and account removed.', 'info');
   } catch (e) {
     console.error(e);

@@ -100,8 +100,9 @@ initAuth(showApp, showLogin);
 // Update pending badge in sidebar periodically
 import { db } from './firebase-config.js';
 import { collection, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { COLLECTIONS } from './constants.js';
 
-const pendingQ = query(collection(db, 'Owners'), where('status', '==', 'pending'));
+const pendingQ = query(collection(db, COLLECTIONS.OWNERS), where('status', '==', 'pending'));
 onSnapshot(pendingQ, snap => {
   const badge = document.getElementById('nav-badge-approvals');
   if (badge) {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/order_provider.dart';
-import '../models/order_model.dart';
+import 'package:krave/src/models/order_model.dart';
 import '../theme/app_theme.dart';
 import '../widgets/order_card.dart';
 import 'order_detail_screen.dart';

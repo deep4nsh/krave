@@ -1,29 +1,78 @@
+import 'dart:io';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/rider_model.dart';
-import '../models/order_model.dart';
+import 'package:krave/src/models/rider_model.dart';
+import 'package:krave/src/models/order_model.dart';
+import 'package:krave/src/constants/app_constants.dart';
 
 class FirebaseService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
 
   User? get currentUser => _auth.currentUser;
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
   // ─── Auth ───────────────────────────────────────────────────────────────────
 
-  Future<RiderModel?> signIn(String email, String password) async {
-    final cred = await _auth.signInWithEmailAndPassword(
-        email: email.trim(), password: password.trim());
-    final uid = cred.user!.uid;
-
-    // Verify user is a rider
-    final doc = await _db.collection('Riders').doc(uid).get();
-    if (!doc.exists) {
-      await _auth.signOut();
-      throw Exception('No rider account found for this email.');
+  Future<void> sendOTP({
+    required String phoneNumber,
+    required Function(String verificationId, int? resendToken) codeSent,
+    required Function(FirebaseAuthException e) verificationFailed,
+    required Function(PhoneAuthCredential credential) verificationCompleted,
+  }) async {
+    try {
+      await _auth.verifyPhoneNumber(
+        phoneNumber: phoneNumber,
+        verificationCompleted: verificationCompleted,
+        verificationFailed: verificationFailed,
+        codeSent: codeSent,
+        codeAutoRetrievalTimeout: (String verificationId) {},
+      );
+    } catch (e) {
+      rethrow;
     }
-    return RiderModel.fromMap(uid, doc.data()!);
+  }
+
+  Future<RiderModel> verifyOTP(String verificationId, String smsCode) async {
+    PhoneAuthCredential credential = PhoneAuthProvider.credential(
+      verificationId: verificationId,
+      smsCode: smsCode,
+    );
+    return await _signInWithCredential(credential);
+  }
+
+  Future<RiderModel> signInWithCredential(PhoneAuthCredential credential) async {
+    return await _signInWithCredential(credential);
+  }
+
+  Future<RiderModel> _signInWithCredential(AuthCredential credential) async {
+    try {
+      final cred = await _auth.signInWithCredential(credential);
+      final uid = cred.user!.uid;
+      final phone = cred.user!.phoneNumber ?? '';
+
+      final doc = await _db.collection(FirestoreCollections.riders).doc(uid).get();
+      if (doc.exists) {
+        return RiderModel.fromMap(uid, doc.data()!);
+      } else {
+        // Create skeleton for new onboarding rider
+        final newRider = RiderModel(
+          id: uid,
+          name: '',
+          email: '',
+          phone: phone,
+          createdAt: DateTime.now(),
+          status: RiderStatus.onboarding,
+          onboardingStep: 1,
+        );
+        await _db.collection(FirestoreCollections.riders).doc(uid).set(newRider.toMap());
+        return newRider;
+      }
+    } catch (e) {
+      rethrow;
+    }
   }
 
   Future<void> signOut() => _auth.signOut();
@@ -31,17 +80,92 @@ class FirebaseService {
   // ─── Rider ──────────────────────────────────────────────────────────────────
 
   Future<RiderModel?> getRider(String uid) async {
-    final doc = await _db.collection('Riders').doc(uid).get();
-    if (!doc.exists) return null;
-    return RiderModel.fromMap(uid, doc.data()!);
+    try {
+      final doc = await _db.collection(FirestoreCollections.riders).doc(uid).get();
+      if (!doc.exists) return null;
+      return RiderModel.fromMap(uid, doc.data()!);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<void> updateBasicProfile(String uid, String name, String city, String vehicleType, String email) async {
+    try {
+      await _db.collection(FirestoreCollections.riders).doc(uid).update({
+        'name': name,
+        'city': city,
+        'vehicleType': vehicleType,
+        'email': email,
+        'onboardingStep': 2,
+      });
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> updateOnboardingStep(String uid, int step) async {
+    try {
+      await _db.collection(FirestoreCollections.riders).doc(uid).update({
+        'onboardingStep': step,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      rethrow;
+    }
   }
 
   Future<void> updateActiveStatus(String uid, bool isActive) async {
-    await _db.collection('Riders').doc(uid).update({'isActive': isActive});
+    try {
+      await _db.collection(FirestoreCollections.riders).doc(uid).update({'isActive': isActive});
+    } catch (e) {
+      rethrow;
+    }
   }
 
   Future<void> updateFCMToken(String uid, String token) async {
-    await _db.collection('Riders').doc(uid).update({'fcmToken': token});
+    try {
+      await _db.collection(FirestoreCollections.riders).doc(uid).update({'fcmToken': token});
+    } catch (e) {
+      // Non-critical, just log
+    }
+  }
+
+  // ─── KYC & Documents ──────────────────────────────────────────────────────
+
+  Future<String> uploadKycDocument(String uid, String docType, File file, Function(double) onProgress) async {
+    final ref = _storage.ref().child('kyc_documents/$uid/$docType.jpg');
+    final uploadTask = ref.putFile(file);
+
+    uploadTask.snapshotEvents.listen((event) {
+      double progress = event.bytesTransferred / event.totalBytes;
+      onProgress(progress);
+    });
+
+    final snapshot = await uploadTask;
+    final downloadUrl = await snapshot.ref.getDownloadURL();
+
+    // Update the rider document's kycDetails map
+    await _db.collection(FirestoreCollections.riders).doc(uid).set({
+      'kycDetails': {
+        docType: {
+          'url': downloadUrl,
+          'status': 'Uploaded', // Becomes 'Pending' when submitted for verif
+          'uploadedAt': FieldValue.serverTimestamp(),
+        }
+      }
+    }, SetOptions(merge: true));
+
+    return downloadUrl;
+  }
+
+  Future<void> submitKycForVerification(String uid) async {
+    try {
+      await _db.collection(FirestoreCollections.riders).doc(uid).update({
+        'onboardingStep': 3,
+      });
+    } catch (e) {
+      rethrow;
+    }
   }
 
   // ─── Orders ─────────────────────────────────────────────────────────────────
@@ -49,8 +173,8 @@ class FirebaseService {
   /// Live feed of active orders (Pending + Preparing + Ready for Pickup)
   Stream<List<OrderModel>> streamActiveOrders() {
     return _db
-        .collection('Orders')
-        .where('status', whereIn: ['Pending', 'Preparing', 'Ready for Pickup'])
+        .collection(FirestoreCollections.orders)
+        .where('status', whereIn: OrderStatus.active)
         .orderBy('timestamp', descending: false)
         .snapshots()
         .map((snap) => snap.docs
@@ -61,7 +185,7 @@ class FirebaseService {
   /// All orders for history (most recent first)
   Stream<List<OrderModel>> streamAllOrders() {
     return _db
-        .collection('Orders')
+        .collection(FirestoreCollections.orders)
         .orderBy('timestamp', descending: true)
         .snapshots()
         .map((snap) => snap.docs
@@ -72,7 +196,7 @@ class FirebaseService {
   /// Fetch canteen name by ID
   Future<String> getCanteenName(String canteenId) async {
     try {
-      final doc = await _db.collection('Canteens').doc(canteenId).get();
+      final doc = await _db.collection(FirestoreCollections.canteens).doc(canteenId).get();
       return doc.data()?['name'] as String? ?? 'Canteen';
     } catch (_) {
       return 'Canteen';
@@ -81,10 +205,14 @@ class FirebaseService {
 
   /// Update order status
   Future<void> updateOrderStatus(String orderId, String status, String riderId) async {
-    await _db.collection('Orders').doc(orderId).update({
-      'status': status,
-      'riderId': riderId,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+    try {
+      await _db.collection(FirestoreCollections.orders).doc(orderId).update({
+        'status': status,
+        'riderId': riderId,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      rethrow;
+    }
   }
 }

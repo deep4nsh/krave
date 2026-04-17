@@ -3,6 +3,8 @@ import { db } from '../firebase-config.js';
 import { collection, onSnapshot, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { registerListener, debounce, showToast, showConfirmModal } from '../utils.js';
 
+import { COLLECTIONS } from '../constants.js';
+
 export async function loadRiders() {
   const main = document.getElementById('main-content');
   main.innerHTML = `
@@ -27,7 +29,7 @@ export async function loadRiders() {
       <div class="table-wrapper">
         <table>
           <thead><tr>
-            <th>Rider</th><th>Contact</th><th>Status</th><th>Actions</th>
+            <th>Rider</th><th>Contact</th><th>Status / Onboarding</th><th>Actions</th>
           </tr></thead>
           <tbody id="riders-tbody">
             <tr><td colspan="4"><div class="page-loading"><div class="spinner"></div></div></td></tr>
@@ -39,7 +41,7 @@ export async function loadRiders() {
 
   let allRiders = [];
 
-  const unsub = onSnapshot(collection(db, 'Riders'), snap => {
+  const unsub = onSnapshot(collection(db, COLLECTIONS.RIDERS), snap => {
     allRiders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     document.getElementById('riders-count').innerHTML = `<span class="badge badge-info" style="font-size:14px;padding:6px 14px">${allRiders.length} Riders</span>`;
     renderRiders(allRiders);
@@ -126,11 +128,11 @@ function showRiderModal(rider = null) {
 
     try {
       if (isEdit) {
-        await updateDoc(doc(db, 'Riders', uid), data);
+        await updateDoc(doc(db, COLLECTIONS.RIDERS, uid), data);
       } else {
         // Use setDoc instead of addDoc because we have the UID
         const { setDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
-        await setDoc(doc(db, 'Riders', uid), data);
+        await setDoc(doc(db, COLLECTIONS.RIDERS, uid), data);
       }
       showToast(`Rider ${isEdit ? 'updated' : 'added'} successfully`, 'success');
       close();
@@ -167,6 +169,9 @@ function renderRiders(riders) {
       </td>
       <td>
         <span class="badge badge-${isActive ? 'success' : 'muted'}">${isActive ? 'Active' : 'Disabled'}</span>
+        <div style="font-size:12px;margin-top:4px;color:var(--text-secondary)">
+          Step: ${r.onboardingStep || 1} | ${r.status || 'unknown'}
+        </div>
       </td>
       <td>
         <div class="action-btns">
@@ -174,6 +179,7 @@ function renderRiders(riders) {
             ${isActive ? '🚫' : '✅'}
           </button>
           <button class="btn btn-secondary btn-icon-only edit-rider-btn" data-id="${r.id}" title="Edit Rider">✏️</button>
+          <button class="btn btn-secondary btn-icon-only review-kyc-btn" data-id="${r.id}" title="Review KYC">📄</button>
           <button class="btn btn-secondary btn-icon-only delete-rider-btn" data-id="${r.id}" title="Delete Rider">🗑️</button>
         </div>
       </td>
@@ -186,7 +192,7 @@ function renderRiders(riders) {
       const id = btn.dataset.id;
       const wasActive = btn.dataset.active === 'true';
       try {
-        await updateDoc(doc(db, 'Riders', id), { isActive: !wasActive });
+        await updateDoc(doc(db, COLLECTIONS.RIDERS, id), { isActive: !wasActive });
         showToast(`Rider ${wasActive ? 'disabled' : 'enabled'} successfully`, 'success');
       } catch (err) {
         showToast('Error updating rider status', 'error');
@@ -211,7 +217,7 @@ function renderRiders(riders) {
         confirmText: 'Delete',
         onConfirm: async () => {
           try {
-            await deleteDoc(doc(db, 'Riders', id));
+            await deleteDoc(doc(db, COLLECTIONS.RIDERS, id));
             showToast('Rider deleted successfully', 'success');
           } catch (err) {
             showToast('Error deleting rider', 'error');
@@ -220,4 +226,131 @@ function renderRiders(riders) {
       });
     });
   });
+
+  tbody.querySelectorAll('.review-kyc-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.id;
+      const rider = riders.find(r => r.id === id);
+      showKycReviewModal(rider);
+    });
+  });
+}
+
+function showKycReviewModal(rider) {
+  const modalId = 'kyc-modal';
+  const kyc = rider.kycDetails || {};
+  const docTypes = [
+    { id: 'aadhaar_front', label: 'Aadhaar (Front)' },
+    { id: 'aadhaar_back', label: 'Aadhaar (Back)' },
+    { id: 'pan_card', label: 'PAN Card' },
+    { id: 'driving_licence', label: 'Driving Licence' },
+    { id: 'vehicle_rc', label: 'Vehicle RC' },
+    { id: 'bank_passbook', label: 'Bank Passbook' },
+    { id: 'live_selfie', label: 'Live Selfie' }
+  ];
+
+  let docsHtml = '';
+  if (Object.keys(kyc).length === 0) {
+    docsHtml = '<p style="color:var(--text-secondary)">No KYC documents uploaded yet.</p>';
+  } else {
+    docsHtml = docTypes.map(type => {
+      const d = kyc[type.id];
+      if (!d) return `<div style="margin-bottom:12px;color:var(--text-secondary)">Missing: <b>${type.label}</b></div>`;
+      
+      return `
+        <div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:16px;">
+          <h4 style="margin-bottom:8px">${type.label} <span class="badge ${d.status === 'Approved' ? 'badge-success' : (d.status === 'Rejected' ? 'badge-danger' : 'badge-warning')}">${d.status || 'Pending'}</span></h4>
+          <div><a href="${d.url}" target="_blank" style="color:var(--primary);text-decoration:none;font-weight:600">📄 View Document</a></div>
+          <div style="margin-top:10px;display:flex;gap:8px;">
+            <button class="btn btn-secondary btn-sm kyc-approve-btn" data-doctype="${type.id}">Approve</button>
+            <button class="btn btn-secondary btn-sm kyc-reject-btn" data-doctype="${type.id}">Reject</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  const modalHtml = `
+    <div class="modal-overlay" id="${modalId}-overlay">
+      <div class="modal-content" style="max-width:600px;max-height:80vh;overflow-y:auto">
+        <div class="modal-header">
+          <h2>Review KYC: ${rider.name || 'Rider'}</h2>
+          <button class="close-modal">✕</button>
+        </div>
+        <div class="modal-body">
+          ${docsHtml}
+          <div class="form-actions" style="margin-top:24px;justify-content:space-between">
+            <button type="button" class="btn btn-primary" id="kyc-full-approve">Approve Entire KYC (Move to Stage 4)</button>
+            <button type="button" class="btn btn-secondary close-modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+  const overlay = document.getElementById(`${modalId}-overlay`);
+
+  const close = () => overlay.remove();
+  overlay.querySelectorAll('.close-modal').forEach(b => b.onclick = close);
+
+  // Approve single doc
+  overlay.querySelectorAll('.kyc-approve-btn').forEach(btn => {
+    btn.onclick = async () => {
+      const typeId = btn.dataset.doctype;
+      const updatedKyc = { ...kyc };
+      updatedKyc[typeId].status = 'Approved';
+      try {
+        await updateDoc(doc(db, COLLECTIONS.RIDERS, rider.id), { kycDetails: updatedKyc });
+        showToast(typeId + ' marked as Approved', 'success');
+        close();
+        showKycReviewModal({ ...rider, kycDetails: updatedKyc });
+      } catch (err) {
+        showToast('Error updating document', 'error');
+      }
+    };
+  });
+
+  // Reject single doc
+  overlay.querySelectorAll('.kyc-reject-btn').forEach(btn => {
+    btn.onclick = async () => {
+      const typeId = btn.dataset.doctype;
+      const updatedKyc = { ...kyc };
+      updatedKyc[typeId].status = 'Rejected';
+      try {
+        await updateDoc(doc(db, COLLECTIONS.RIDERS, rider.id), { kycDetails: updatedKyc });
+        showToast(typeId + ' marked as Rejected', 'success');
+        close();
+        showKycReviewModal({ ...rider, kycDetails: updatedKyc });
+      } catch (err) {
+        showToast('Error updating document', 'error');
+      }
+    };
+  });
+
+  // Approve all and advance to Stage 4 (or set status)
+  const fullApproveBtn = document.getElementById('kyc-full-approve');
+  if (fullApproveBtn) {
+    fullApproveBtn.onclick = async () => {
+      showConfirmModal({
+        title: 'Approve Rider KYC?',
+        message: 'This will advance the rider to Training (Stage 4).',
+        confirmText: 'Yes, Approve All',
+        onConfirm: async () => {
+          const updatedKyc = { ...kyc };
+          Object.keys(updatedKyc).forEach(k => updatedKyc[k].status = 'Approved');
+          try {
+            await updateDoc(doc(db, COLLECTIONS.RIDERS, rider.id), { 
+              kycDetails: updatedKyc,
+              onboardingStep: 4 // Advance to training
+            });
+            showToast('KYC fully approved! Rider advanced to Stage 4.', 'success');
+            close();
+          } catch (err) {
+            showToast('Error', 'error');
+          }
+        }
+      });
+    };
+  }
 }

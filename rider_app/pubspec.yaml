@@ -11,6 +11,9 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.8
 
+  krave:
+    path: ../
+
   # Firebase
   firebase_core: ^3.6.0
   firebase_auth: ^5.3.1
@@ -24,6 +27,10 @@ dependencies:
   intl: ^0.19.0
   shared_preferences: ^2.3.2
   google_fonts: ^6.2.1
+  pinput: ^6.0.2
+  image_picker: ^1.2.1
+  firebase_storage: ^12.4.10
+  lottie: ^3.3.2
 
 dev_dependencies:
   flutter_test:

@@ -1,4 +1,4 @@
-// lib/models/order_model.dart
+// lib/src/models/order_model.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class OrderModel {
@@ -52,4 +52,22 @@ class OrderModel {
     'paymentId': paymentId,
     'riderId': riderId,
   };
+
+  /// Human-readable items summary e.g. "2x Chole Bhature, 1x Burger"
+  String get itemsSummary {
+    return items.map((i) {
+      final qty = i['quantity'] ?? 1;
+      final name = i['name'] ?? '?';
+      return '${qty}x $name';
+    }).join(', ');
+  }
+
+  /// Total item count
+  int get itemCount => items.fold(0, (s, i) => s + ((i['quantity'] as int?) ?? 1));
+
+  /// Status helper getters
+  bool get isPending => status == 'Pending';
+  bool get isPreparing => status == 'Preparing';
+  bool get isPickupReady => status == 'Ready for Pickup';
+  bool get isDone => status == 'Completed' || status == 'Cancelled';
 }

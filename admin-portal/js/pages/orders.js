@@ -6,7 +6,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { registerListener, showToast, formatDate, formatCurrency, statusBadge, exportToCSV, debounce } from '../utils.js';
 
-const ORDER_STATUSES = ['Pending', 'Preparing', 'Ready for Pickup', 'Completed', 'Cancelled'];
+import { ORDER_STATUS_LIST, COLLECTIONS } from '../constants.js';
 
 export async function loadOrders() {
   const main = document.getElementById('main-content');
@@ -25,7 +25,7 @@ export async function loadOrders() {
       </div>
       <select class="filter-select" id="status-filter">
         <option value="">All Statuses</option>
-        ${ORDER_STATUSES.map(s => `<option value="${s}">${s}</option>`).join('')}
+        ${ORDER_STATUS_LIST.map(s => `<option value="${s}">${s}</option>`).join('')}
       </select>
       <div class="filters-spacer"></div>
       <div id="orders-count"></div>
@@ -49,10 +49,10 @@ export async function loadOrders() {
   let ridersCache = {};
 
   // Fetch riders to map names
-  const ridersSnap = await getDocs(collection(db, 'Riders'));
+  const ridersSnap = await getDocs(collection(db, COLLECTIONS.RIDERS));
   ridersSnap.forEach(doc => { ridersCache[doc.id] = doc.data().name || 'Unknown Rider'; });
 
-  const q = query(collection(db, 'Orders'), orderBy('timestamp', 'desc'));
+  const q = query(collection(db, COLLECTIONS.ORDERS), orderBy('timestamp', 'desc'));
   const unsub = onSnapshot(q, snap => {
     allOrders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     updateCount(allOrders.length);
@@ -82,7 +82,7 @@ export async function loadOrders() {
 
   window.updateOrderStatus = async (orderId, status) => {
     try {
-      await updateDoc(doc(db, 'Orders', orderId), { status, updatedAt: serverTimestamp() });
+      await updateDoc(doc(db, COLLECTIONS.ORDERS, orderId), { status, updatedAt: serverTimestamp() });
       showToast(`Order status updated to "${status}"`, 'success');
     } catch (e) {
       showToast(`Failed: ${e.message}`, 'error');
@@ -118,7 +118,7 @@ function renderOrders(orders, ridersCache = {}) {
       <td style="color:var(--text-muted);font-size:12px">${formatDate(o.timestamp)}</td>
       <td>
         <select class="order-status-select" onchange="updateOrderStatus('${o.id}', this.value)">
-          ${ORDER_STATUSES.map(s => `<option value="${s}" ${o.status===s?'selected':''}>${s}</option>`).join('')}
+          ${ORDER_STATUS_LIST.map(s => `<option value="${s}" ${o.status===s?'selected':''}>${s}</option>`).join('')}
         </select>
       </td>
     </tr>`;

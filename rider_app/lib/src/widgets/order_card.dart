@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../models/order_model.dart';
+import 'package:krave/src/models/order_model.dart';
 import '../theme/app_theme.dart';
 
 /// Compact card shown in the live order feed

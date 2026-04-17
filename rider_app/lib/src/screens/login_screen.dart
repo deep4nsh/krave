@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:pinput/pinput.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 
@@ -11,30 +12,52 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _emailCtrl = TextEditingController();
-  final _passwordCtrl = TextEditingController();
-  bool _obscure = true;
+  final _phoneCtrl = TextEditingController();
+  final _otpCtrl = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
   void dispose() {
-    _emailCtrl.dispose();
-    _passwordCtrl.dispose();
+    _phoneCtrl.dispose();
+    _otpCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _signIn() async {
+  Future<void> _sendOTP() async {
     if (!_formKey.currentState!.validate()) return;
-    await context.read<AuthProvider>().signIn(
-          _emailCtrl.text,
-          _passwordCtrl.text,
-        );
+    String phone = _phoneCtrl.text.trim();
+    if (!phone.startsWith('+')) {
+      phone = '+91$phone'; // Default to India if no code
+    }
+    await context.read<AuthProvider>().sendOTP(phone);
+  }
+
+  Future<void> _verifyOTP() async {
+    if (_otpCtrl.text.length != 6) return;
+    await context.read<AuthProvider>().verifyOTP(_otpCtrl.text);
   }
 
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final isLoading = auth.state == AuthState.loading;
+    final isOtpMode = auth.state == AuthState.otpSent;
+
+    final defaultPinTheme = PinTheme(
+      width: 50,
+      height: 56,
+      textStyle: const TextStyle(fontSize: 20, color: AppTheme.textPrimary, fontWeight: FontWeight.w600),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceLight,
+        border: Border.all(color: AppTheme.border),
+        borderRadius: BorderRadius.circular(12),
+      ),
+    );
 
     return Scaffold(
       body: Container(
@@ -54,24 +77,20 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Logo / Brand
+                    // Logo
                     Container(
                       width: 72,
                       height: 72,
                       decoration: BoxDecoration(
                         color: AppTheme.accent.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                            color: AppTheme.accent.withOpacity(0.3), width: 2),
+                        border: Border.all(color: AppTheme.accent.withOpacity(0.3), width: 2),
                       ),
-                      child: const Center(
-                        child: Text('🛵',
-                            style: TextStyle(fontSize: 36)),
-                      ),
+                      child: const Center(child: Text('🛵', style: TextStyle(fontSize: 36))),
                     ),
                     const SizedBox(height: 24),
                     const Text(
-                      'Krave Rider',
+                      'Rider Onboarding',
                       style: TextStyle(
                         fontSize: 30,
                         fontWeight: FontWeight.w800,
@@ -80,50 +99,43 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    const Text(
-                      'Sign in to your rider account',
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: AppTheme.textSecondary,
-                      ),
+                    Text(
+                      isOtpMode
+                          ? 'Enter the 6-digit code sent to ${_phoneCtrl.text}'
+                          : 'Enter your phone number to start',
+                      style: const TextStyle(fontSize: 15, color: AppTheme.textSecondary),
                     ),
                     const SizedBox(height: 36),
 
-                    // Email
-                    TextFormField(
-                      controller: _emailCtrl,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        prefixIcon:
-                            Icon(Icons.email_rounded, color: AppTheme.textMuted),
-                      ),
-                      validator: (v) =>
-                          (v?.contains('@') == true) ? null : 'Enter a valid email',
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Password
-                    TextFormField(
-                      controller: _passwordCtrl,
-                      obscureText: _obscure,
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        prefixIcon: const Icon(Icons.lock_rounded,
-                            color: AppTheme.textMuted),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscure
-                                ? Icons.visibility_rounded
-                                : Icons.visibility_off_rounded,
-                            color: AppTheme.textMuted,
-                          ),
-                          onPressed: () => setState(() => _obscure = !_obscure),
+                    if (!isOtpMode) ...[
+                      // Phone Number Entry
+                      TextFormField(
+                        controller: _phoneCtrl,
+                        keyboardType: TextInputType.phone,
+                        maxLength: 10,
+                        style: const TextStyle(fontSize: 18, letterSpacing: 2),
+                        decoration: InputDecoration(
+                          labelText: 'Mobile Number',
+                          prefixText: '+91 ',
+                          prefixStyle: const TextStyle(fontSize: 18, color: AppTheme.textPrimary, letterSpacing: 2),
+                          prefixIcon: const Icon(Icons.phone_rounded, color: AppTheme.textMuted),
+                          counterText: '',
                         ),
+                        validator: (v) => (v != null && v.length >= 10) ? null : 'Enter a valid 10-digit number',
                       ),
-                      validator: (v) =>
-                          (v != null && v.length >= 6) ? null : 'Min 6 characters',
-                    ),
+                    ] else ...[
+                      // OTP Entry
+                      Pinput(
+                        length: 6,
+                        controller: _otpCtrl,
+                        defaultPinTheme: defaultPinTheme,
+                        focusedPinTheme: defaultPinTheme.copyDecorationWith(
+                          border: Border.all(color: AppTheme.accent),
+                        ),
+                        onCompleted: (pin) => _verifyOTP(),
+                      ),
+                    ],
+
                     const SizedBox(height: 8),
 
                     // Error
@@ -134,36 +146,24 @@ class _LoginScreenState extends State<LoginScreen> {
                         decoration: BoxDecoration(
                           color: AppTheme.accentRed.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                              color: AppTheme.accentRed.withOpacity(0.3)),
+                          border: Border.all(color: AppTheme.accentRed.withOpacity(0.3)),
                         ),
                         child: Text(
                           auth.error!,
-                          style: const TextStyle(
-                              color: AppTheme.accentRed, fontSize: 13),
+                          style: const TextStyle(color: AppTheme.accentRed, fontSize: 13),
                         ),
                       ),
+                    
                     const SizedBox(height: 24),
 
-                    // Sign In Button
+                    // Primary Button
                     ElevatedButton(
-                      onPressed: isLoading ? null : _signIn,
+                      onPressed: isLoading ? null : (isOtpMode ? _verifyOTP : _sendOTP),
                       child: isLoading
                           ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.black))
-                          : const Text('Sign In'),
-                    ),
-                    const SizedBox(height: 24),
-                    const Center(
-                      child: Text(
-                        'Rider accounts are managed by Krave admin.',
-                        style: TextStyle(
-                            color: AppTheme.textMuted, fontSize: 12),
-                        textAlign: TextAlign.center,
-                      ),
+                              height: 20, width: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                          : Text(isOtpMode ? 'Verify & Continue' : 'Send OTP'),
                     ),
                   ],
                 ),
