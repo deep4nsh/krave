@@ -45,5 +45,9 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Krave needs access to your location to show nearby canteens and restaurants within your delivery radius.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Krave needs access to your location to show nearby canteens and restaurants within your delivery radius.</string>
 </dict>
 </plist>

@@ -29,6 +29,12 @@ class RiderStatus {
   static const String suspended = 'suspended';
 }
 
+class VenueTypeConstants {
+  static const String canteen = 'canteen';
+  static const String restaurant = 'restaurant';
+  static const double defaultRadius = 1500.0; // 1.5km
+}
+
 class FirestoreCollections {
   static const String orders = 'Orders';
   static const String riders = 'Riders';

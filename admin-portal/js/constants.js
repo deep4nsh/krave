@@ -23,6 +23,11 @@ export const RIDER_STATUS = {
   SUSPENDED: 'suspended'
 };
 
+export const VENUE_TYPE = {
+  CANTEEN: 'canteen',
+  RESTAURANT: 'restaurant'
+};
+
 export const COLLECTIONS = {
   ORDERS: 'Orders',
   RIDERS: 'Riders',

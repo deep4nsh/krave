@@ -65,7 +65,7 @@ class _CanteenMenuState extends State<CanteenMenu> {
                   fit: StackFit.expand,
                   children: [
                     CachedNetworkImage(
-                      imageUrl: 'https://loremflickr.com/640/360/food,restaurant/all?lock=${widget.canteen.id.hashCode}',
+                      imageUrl: 'https://loremflickr.com/640/360/food,${widget.canteen.type == VenueType.restaurant ? 'restaurant' : 'canteen'}/all?lock=${widget.canteen.id.hashCode}',
                       fit: BoxFit.cover,
                     ),
                     DecoratedBox(

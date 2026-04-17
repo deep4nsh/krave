@@ -1,12 +1,4 @@
-// ─── Owner Approvals Page ─────────────────────────────────────────────────────
-import { db } from '../firebase-config.js';
-import {
-  collection, query, where, onSnapshot,
-  doc, getDoc, addDoc, updateDoc, deleteDoc, serverTimestamp
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { registerListener, showToast, showConfirmModal, formatDateShort } from '../utils.js';
-
-import { COLLECTIONS } from '../constants.js';
+import { COLLECTIONS, VENUE_TYPE } from '../constants.js';
 
 export async function loadApprovals() {
   const main = document.getElementById('main-content');
@@ -14,7 +6,7 @@ export async function loadApprovals() {
     <div class="page-header">
       <div class="page-header-left">
         <h1>Owner Approvals</h1>
-        <p>Review and manage pending canteen owner applications.</p>
+        <p>Review and manage pending canteen/restaurant applications.</p>
       </div>
       <div id="approvals-count"></div>
     </div>
@@ -38,7 +30,7 @@ export async function loadApprovals() {
         <div class="empty-state">
           <div class="empty-icon">✅</div>
           <h3>All caught up!</h3>
-          <p>No pending owner applications at this time.</p>
+          <p>No pending applications at this time.</p>
         </div>`;
       return;
     }
@@ -55,14 +47,14 @@ export async function loadApprovals() {
               <div class="approval-email">${o.email || '—'}</div>
             </div>
           </div>
-          <div class="info-row"><span class="info-label">🏪 Canteen</span><span class="info-value">${o.canteen_name || 'N/A'}</span></div>
+          <div class="info-row"><span class="info-label">🏪 Venue</span><span class="info-value">${o.canteen_name || 'N/A'}</span></div>
           <div class="info-row"><span class="info-label">📅 Applied</span><span class="info-value">${formatDateShort(o.createdAt)}</span></div>
           <div class="info-row"><span class="info-label">🆔 Owner ID</span><span class="info-value" style="font-family:monospace;font-size:11px;color:var(--text-muted)">${d.id}</span></div>
           <div class="approval-actions">
             <button class="btn btn-danger" onclick="handleReject('${d.id}', '${(o.name||'').replace(/'/g,"\\'")}')">
               ✕ Reject
             </button>
-            <button class="btn btn-success" onclick="handleApprove('${d.id}', '${(o.canteen_name||'').replace(/'/g,"\\'")}', '${(o.name||'').replace(/'/g,"\\'")}')">
+            <button class="btn btn-success" onclick="showApprovalForm('${d.id}', '${(o.canteen_name||'').replace(/'/g,"\\'")}', '${(o.name||'').replace(/'/g,"\\'")}')">
               ✓ Approve
             </button>
           </div>
@@ -75,14 +67,64 @@ export async function loadApprovals() {
   registerListener(unsub);
 
   // Expose handlers globally
-  window.handleApprove = (ownerId, canteenName, ownerName) => {
-    showConfirmModal({
-      title: 'Approve Owner',
-      message: `Approve "${ownerName}" and create canteen "${canteenName}"? This will grant them full owner access.`,
-      confirmText: 'Approve',
-      confirmClass: 'btn-success',
-      onConfirm: () => approveOwner(ownerId, canteenName),
-    });
+  window.showApprovalForm = (ownerId, venueName, ownerName) => {
+    const modalId = 'approval-form-modal';
+    const modalHtml = `
+      <div class="modal-overlay" id="${modalId}-overlay">
+        <div class="modal-content" style="max-width:500px">
+          <div class="modal-header">
+            <h2>Approve Venue: ${venueName}</h2>
+            <button class="close-modal">✕</button>
+          </div>
+          <div class="modal-body">
+            <form id="approval-form" class="admin-form">
+              <div class="form-group">
+                <label>Venue Type</label>
+                <select id="v-type" required>
+                  <option value="${VENUE_TYPE.CANTEEN}">Campus Canteen</option>
+                  <option value="${VENUE_TYPE.RESTAURANT}">External Restaurant</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Latitude</label>
+                <input type="number" step="any" id="v-lat" placeholder="e.g. 28.7041" required>
+              </div>
+              <div class="form-group">
+                <label>Longitude</label>
+                <input type="number" step="any" id="v-lng" placeholder="e.g. 77.1025" required>
+              </div>
+              <div class="form-group">
+                <label>Delivery Radius (meters)</label>
+                <input type="number" id="v-radius" value="1500" required>
+                <small>Students beyond this radius won't see this venue.</small>
+              </div>
+              <div class="form-actions" style="margin-top:24px">
+                <button type="button" class="btn btn-secondary close-modal">Cancel</button>
+                <button type="submit" class="btn btn-success">Complete Approval</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const overlay = document.getElementById(`${modalId}-overlay`);
+    const form = document.getElementById('approval-form');
+
+    const close = () => overlay.remove();
+    overlay.querySelectorAll('.close-modal').forEach(b => b.onclick = close);
+
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const type = document.getElementById('v-type').value;
+      const lat = parseFloat(document.getElementById('v-lat').value);
+      const lng = parseFloat(document.getElementById('v-lng').value);
+      const radius = parseFloat(document.getElementById('v-radius').value);
+
+      await approveOwner(ownerId, venueName, { type, lat, lng, radius });
+      close();
+    };
   };
 
   window.handleReject = (ownerId, ownerName) => {
@@ -96,17 +138,21 @@ export async function loadApprovals() {
   };
 }
 
-async function approveOwner(ownerId, canteenName) {
+async function approveOwner(ownerId, venueName, details) {
   try {
     const ownerRef = doc(db, COLLECTIONS.OWNERS, ownerId);
     const ownerSnap = await getDoc(ownerRef);
     if (!ownerSnap.exists()) throw new Error('Owner not found');
 
-    // 1. Create canteen
+    // 1. Create venue
     const canteenRef = await addDoc(collection(db, COLLECTIONS.CANTEENS), {
-      name: canteenName,
+      name: venueName,
       ownerId,
       approved: true,
+      type: details.type,
+      latitude: details.lat,
+      longitude: details.lng,
+      deliveryRadius: details.radius,
       opening_time: '9:00 AM',
       closing_time: '5:00 PM',
       createdAt: serverTimestamp(),
@@ -122,7 +168,7 @@ async function approveOwner(ownerId, canteenName) {
     // 3. Update Users collection
     await updateDoc(doc(db, COLLECTIONS.USERS, ownerId), { role: 'approvedOwner' });
 
-    showToast(`✅ ${canteenName} approved successfully!`, 'success');
+    showToast(`✅ ${venueName} approved successfully!`, 'success');
   } catch (e) {
     console.error(e);
     showToast(`Failed: ${e.message}`, 'error');

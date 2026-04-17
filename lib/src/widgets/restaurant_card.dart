@@ -8,10 +8,14 @@ import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import '../widgets/glass_container.dart';
 
+import 'package:geolocator/geolocator.dart';
+import '../utils/location_helper.dart';
+
 class RestaurantCard extends StatelessWidget {
   final Canteen canteen;
+  final Position? userPosition;
   
-  const RestaurantCard({super.key, required this.canteen});
+  const RestaurantCard({super.key, required this.canteen, this.userPosition});
 
   Future<void> _showEditTimingsDialog(BuildContext context) async {
     TimeOfDay? openingTime;
@@ -40,6 +44,9 @@ class RestaurantCard extends StatelessWidget {
     openingTime = parseTime(canteen.openingTime);
     closingTime = parseTime(canteen.closingTime);
 
+    final isRestaurant = canteen.type == VenueType.restaurant;
+    final label = isRestaurant ? 'Restaurant' : 'Canteen';
+
     await showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -54,7 +61,7 @@ class RestaurantCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Edit Canteen Timings',
+                  'Edit $label Timings',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
@@ -141,7 +148,23 @@ class RestaurantCard extends StatelessWidget {
     final theme = Theme.of(context);
     final user = context.watch<AuthService>().currentUser;
     final isOwner = user?.uid == canteen.ownerId;
+    final isRestaurant = canteen.type == VenueType.restaurant;
     
+    String distanceStr = 'Near you';
+    if (userPosition != null) {
+      final distance = LocationHelper.calculateDistance(
+        userPosition!.latitude, 
+        userPosition!.longitude, 
+        canteen.latitude, 
+        canteen.longitude,
+      );
+      if (distance < 1000) {
+        distanceStr = '${distance.toStringAsFixed(0)}m away';
+      } else {
+        distanceStr = '${(distance / 1000).toStringAsFixed(1)}km away';
+      }
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 24),
       decoration: BoxDecoration(
@@ -235,6 +258,29 @@ class RestaurantCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    // Venue Type Badge
+                    Positioned(
+                      top: 16,
+                      right: isOwner ? 16 + 50 : 16, // Shift if edit button is there
+                      child: GlassContainer(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        borderRadius: BorderRadius.circular(10),
+                        opacity: 0.2,
+                        child: Row(
+                          children: [
+                            Icon(isRestaurant ? Icons.restaurant_rounded : Icons.lunch_dining_rounded, color: Colors.white, size: 12),
+                            const SizedBox(width: 6),
+                            Text(
+                              isRestaurant ? 'RESTRO' : 'CANTEEN',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                     if (isOwner)
                       Positioned(
                         top: 16,
@@ -308,7 +354,7 @@ class RestaurantCard extends StatelessWidget {
                         Icon(Icons.location_on_rounded, size: 14, color: theme.colorScheme.primary.withOpacity(0.7)),
                         const SizedBox(width: 4),
                         Text(
-                          'Canteen Area • 1.2km away',
+                          '${isRestaurant ? 'External' : 'Campus'} • $distanceStr',
                           style: theme.textTheme.bodyMedium,
                         ),
                       ],
@@ -327,7 +373,7 @@ class RestaurantCard extends StatelessWidget {
                           Icon(Icons.local_offer_rounded, size: 16, color: theme.colorScheme.primary),
                           const SizedBox(width: 8),
                           Text(
-                            'Flat 50% OFF up to ₹100',
+                            isRestaurant ? 'Special Welcome Offer' : 'Flat 50% OFF up to ₹100',
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.primary,
                               fontWeight: FontWeight.w600,

@@ -1,18 +1,17 @@
  import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../models/canteen_model.dart';
+import '../../utils/location_helper.dart';
 import '../../widgets/gradient_background.dart';
-import 'canteen_menu.dart';
-import '../auth/login_screen.dart';
 import 'order_history.dart';
 import 'profile_screen.dart';
 import '../../widgets/skeleton_canteen_card.dart';
 import '../../widgets/glass_container.dart';
 import '../../widgets/restaurant_card.dart';
-import '../../widgets/developer_note_dialog.dart';
 
 class UserHome extends StatefulWidget {
   const UserHome({super.key});
@@ -23,22 +22,22 @@ class UserHome extends StatefulWidget {
 
 class _UserHomeState extends State<UserHome> {
   String _searchQuery = '';
+  Position? _currentPosition;
+  bool _isLoadingLocation = true;
 
-  Future<void> _logout(BuildContext context) async {
-    final navigator = Navigator.of(context);
-    final auth = context.read<AuthService>();
-    try {
-      await auth.logout();
-      navigator.pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-        (route) => false,
-      );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Logout failed: $e')),
-        );
-      }
+  @override
+  void initState() {
+    super.initState();
+    _initLocation();
+  }
+
+  Future<void> _initLocation() async {
+    final pos = await LocationHelper.getCurrentLocation();
+    if (mounted) {
+      setState(() {
+        _currentPosition = pos;
+        _isLoadingLocation = false;
+      });
     }
   }
 
@@ -164,13 +163,21 @@ class _UserHomeState extends State<UserHome> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Text(
-                      "Popular Canteens",
+                      "Nearby Venues",
                       style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                         letterSpacing: -0.5,
                       ),
                     ),
                   ),
+                  if (_currentPosition == null && !_isLoadingLocation)
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Text(
+                        "Please enable location to see nearby canteens and restaurants.",
+                        style: TextStyle(color: theme.colorScheme.error, fontSize: 13),
+                      ),
+                    ),
                   const SizedBox(height: 16),
                 ],
               ),
@@ -178,7 +185,7 @@ class _UserHomeState extends State<UserHome> {
             StreamBuilder<List<Canteen>>(
               stream: fs.streamApprovedCanteens(),
               builder: (context, snap) {
-                if (snap.connectionState == ConnectionState.waiting) {
+                if (snap.connectionState == ConnectionState.waiting || _isLoadingLocation) {
                   return SliverPadding(
                     padding: const EdgeInsets.all(16.0),
                     sliver: SliverList(
@@ -195,14 +202,39 @@ class _UserHomeState extends State<UserHome> {
                   );
                 }
                 
-                final allCanteens = snap.data ?? [];
-                final canteens = allCanteens.where((c) {
-                  return c.name.toLowerCase().contains(_searchQuery);
+                final allVenues = snap.data ?? [];
+                final venues = allVenues.where((v) {
+                  // 1. Text Search
+                  bool matchesSearch = v.name.toLowerCase().contains(_searchQuery);
+                  if (!matchesSearch) return false;
+
+                  // 2. Radius Filter
+                  if (_currentPosition == null) return v.type == VenueType.canteen; // Default to showing canteens if no loc
+
+                  return LocationHelper.isWithinRadius(
+                    userLat: _currentPosition!.latitude,
+                    userLng: _currentPosition!.longitude,
+                    venueLat: v.latitude,
+                    venueLng: v.longitude,
+                    radiusInMeters: v.deliveryRadius,
+                  );
                 }).toList();
 
-                if (canteens.isEmpty) {
-                  return const SliverFillRemaining(
-                    child: Center(child: Text('No canteens found.')),
+                if (venues.isEmpty) {
+                  return SliverFillRemaining(
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('No venues found in your radius.', style: TextStyle(color: Colors.white54)),
+                          const SizedBox(height: 8),
+                          TextButton(
+                            onPressed: _initLocation,
+                            child: const Text('Refresh Location'),
+                          )
+                        ],
+                      ),
+                    ),
                   );
                 }
                 
@@ -211,13 +243,17 @@ class _UserHomeState extends State<UserHome> {
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
-                        final canteen = canteens[index];
+                        final canteen = venues[index];
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 16.0),
-                          child: _AnimatedCanteenCard(canteen: canteen, index: index),
+                          child: _AnimatedCanteenCard(
+                            canteen: canteen, 
+                            index: index, 
+                            userPosition: _currentPosition,
+                          ),
                         );
                       },
-                      childCount: canteens.length,
+                      childCount: venues.length,
                     ),
                   ),
                 );
@@ -233,8 +269,9 @@ class _UserHomeState extends State<UserHome> {
 class _AnimatedCanteenCard extends StatefulWidget {
   final Canteen canteen;
   final int index;
+  final Position? userPosition;
 
-  const _AnimatedCanteenCard({required this.canteen, required this.index});
+  const _AnimatedCanteenCard({required this.canteen, required this.index, this.userPosition});
 
   @override
   State<_AnimatedCanteenCard> createState() => _AnimatedCanteenCardState();
@@ -279,7 +316,10 @@ class _AnimatedCanteenCardState extends State<_AnimatedCanteenCard> with SingleT
       opacity: _fadeAnimation,
       child: SlideTransition(
         position: _slideAnimation,
-        child: RestaurantCard(canteen: widget.canteen),
+        child: RestaurantCard(
+          canteen: widget.canteen, 
+          userPosition: widget.userPosition,
+        ),
       ),
     );
   }
