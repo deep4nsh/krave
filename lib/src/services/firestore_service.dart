@@ -6,11 +6,14 @@ import '../models/canteen_model.dart';
 import '../models/menu_item_model.dart';
 import '../models/order_model.dart';
 import '../models/rider_model.dart';
+import '../models/transaction_model.dart';
 import 'package:uuid/uuid.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final _uuid = const Uuid();
+
+  // ─── User Management ───────────────────────────────────────────────────────
 
   Future<void> createUser(KraveUser user) async {
     await _db.collection('Users').doc(user.id).set(user.toMap());
@@ -26,9 +29,7 @@ class FirestoreService {
     try {
       final adminDoc = await _db.collection('Admins').doc(uid).get();
       if (adminDoc.exists) return 'admin';
-    } catch (_) {
-      // Ignore permission errors, just move to the next check
-    }
+    } catch (_) {}
 
     try {
       final ownerDoc = await _db.collection('Owners').doc(uid).get();
@@ -36,9 +37,7 @@ class FirestoreService {
         final status = ownerDoc.data()?['status'] ?? 'pending';
         return status == 'approved' ? 'approvedOwner' : 'pendingOwner';
       }
-    } catch (_) {
-      // Ignore permission errors
-    }
+    } catch (_) {}
 
     final userDoc = await _db.collection('Users').doc(uid).get();
     if (userDoc.exists) return 'user';
@@ -46,274 +45,141 @@ class FirestoreService {
     return 'none';
   }
 
-  Future<void> updateUserFCMToken(String uid, String token) async {
-    final data = {'fcmToken': token};
-    
-    // Try updating in each collection, stopping once successful.
-    // This is more resilient to permission issues than checking .exists first.
-    try {
-      await _db.collection('Users').doc(uid).update(data);
-      return;
-    } catch (_) {}
+  // ─── Wallet System ────────────────────────────────────────────────────────
 
-    try {
-      await _db.collection('Owners').doc(uid).update(data);
-      return;
-    } catch (_) {}
+  Future<void> processWalletPayment(String userId, double amount, String orderId) async {
+    final userRef = _db.collection('Users').doc(userId);
+    final txRef = _db.collection('Transactions').doc();
 
-    try {
-      await _db.collection('Admins').doc(uid).update(data);
-      return;
-    } catch (_) {}
-  }
+    await _db.runTransaction((tx) async {
+      final userSnap = await tx.get(userRef);
+      if (!userSnap.exists) throw Exception('User not found');
+      
+      final currentBalance = (userSnap.data()?['walletBalance'] ?? 0.0).toDouble();
+      if (currentBalance < amount) throw Exception('Insufficient wallet balance');
 
-  Future<void> addOwner(String uid, String name, String email, String canteenName) async {
-    // Create the user document first, so the role can be determined on login
-    await createUser(KraveUser(id: uid, name: name, email: email, role: 'pendingOwner'));
+      // 1. Deduct from wallet
+      tx.update(userRef, {
+        'walletBalance': currentBalance - amount,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
 
-    // Then, create the owner application document
-    await _db.collection('Owners').doc(uid).set({
-      'uid': uid,
-      'name': name,
-      'email': email,
-      'canteen_name': canteenName,
-      'status': 'pending',
-      'canteen_id': null,
-      'createdAt': FieldValue.serverTimestamp(),
+      // 2. Log transaction
+      final walletTx = WalletTransaction(
+        id: txRef.id,
+        userId: userId,
+        amount: amount,
+        type: TransactionType.debit,
+        status: TransactionStatus.success,
+        timestamp: DateTime.now(),
+        title: 'Order Payment',
+        refId: orderId,
+      );
+      tx.set(txRef, {
+        ...walletTx.toMap(),
+        'timestamp': FieldValue.serverTimestamp(),
+      });
     });
   }
 
-  Future<Map<String, dynamic>?> getOwnerDoc(String uid) async {
-    final doc = await _db.collection('Owners').doc(uid).get();
-    if (!doc.exists) return null;
-    return doc.data();
-  }
-
-  Stream<QuerySnapshot> streamPendingOwners() {
-    return _db.collection('Owners').where('status', isEqualTo: 'pending').snapshots();
-  }
-
-  // DEFINITIVE FIX: Complete approval logic
-  Future<void> approveOwner(String ownerId) async {
-    final ownerRef = _db.collection('Owners').doc(ownerId);
-    final ownerSnapshot = await ownerRef.get();
-    final ownerData = ownerSnapshot.data();
-
-    if (ownerData == null) {
-      throw Exception('Owner not found!');
-    }
-
-    // 1. Create the new canteen document
-    final canteenRef = await _db.collection('Canteens').add({
-      'name': ownerData['canteen_name'],
-      'ownerId': ownerId,
-      'approved': true,
-      'opening_time': '9:00 AM', // Default opening time
-      'closing_time': '5:00 PM', // Default closing time
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-
-    // 2. Update the owner's document with the new canteen ID and approved status
-    await ownerRef.update({
-      'status': 'approved',
-      'canteen_id': canteenRef.id,
-      'approvedAt': FieldValue.serverTimestamp(),
-    });
-
-    // 3. Update the user's role in the Users collection for proper redirection
-    await _db.collection('Users').doc(ownerId).update({
-      'role': 'approvedOwner'
-    });
-  }
-
-  // DEFINITIVE FIX: Rejection now triggers the secure Cloud Function
-  Future<void> rejectOwner(String ownerId) async {
-    // Deleting the owner document will trigger the onOwnerDelete cloud function
-    // which will securely delete the user from Firebase Auth.
-    await _db.collection('Owners').doc(ownerId).delete();
-    // Also delete the associated user document
-    await _db.collection('Users').doc(ownerId).delete();
-  }
-
-
-  Future<bool> isAdmin(String uid) async {
-    final doc = await _db.collection('Admins').doc(uid).get();
-    return doc.exists;
-  }
-
-  @Deprecated('Use isAdmin(uid) or Firebase Auth custom claims.')
-  Future<bool> verifyAdminCredentials(String email, String? password) async {
-    final snapshot = await _db.collection('Admins').where('email', isEqualTo: email).limit(1).get();
-    return snapshot.docs.isNotEmpty;
-  }
+  // ─── Canteen Management ────────────────────────────────────────────────────
 
   Stream<List<Canteen>> streamApprovedCanteens() {
-    return _db.collection('Canteens').where('approved', isEqualTo: true).snapshots().map((snap) => snap.docs.map((d) => Canteen.fromMap(d.id, d.data())).toList());
+    return _db.collection('Canteens')
+        .where('approved', isEqualTo: true)
+        .snapshots()
+        .map((snap) => snap.docs.map((d) => Canteen.fromMap(d.id, d.data())).toList());
   }
 
-  Future<void> revokeCanteenApproval(String canteenId, String ownerId) async {
-    // 1. Delete the canteen
-    await _db.collection('Canteens').doc(canteenId).delete();
-
-    // 2. Reset owner status
-    await _db.collection('Owners').doc(ownerId).update({
-      'status': 'pending',
-      'canteen_id': null,
-      'revokedAt': FieldValue.serverTimestamp(),
-    });
-
-    // 3. Reset user role
-    await _db.collection('Users').doc(ownerId).update({
-      'role': 'pendingOwner'
-    });
-  }
-
-  Future<void> updateCanteenTimings(String canteenId, String openTime, String closeTime) async {
+  Future<void> updateCanteenStatus(String canteenId, VenueStatus status) async {
     await _db.collection('Canteens').doc(canteenId).update({
-      'opening_time': openTime,
-      'closing_time': closeTime,
+      'status': status.name,
       'updatedAt': FieldValue.serverTimestamp(),
     });
   }
 
-  Stream<List<MenuItemModel>> streamMenuItems(String canteenId) {
-    return _db.collection('Canteens').doc(canteenId).collection('MenuItems').snapshots().map((snapshot) {
-      final items = snapshot.docs.map((doc) {
-        try {
-          return MenuItemModel.fromMap(doc.id, doc.data());
-        } catch (e, stackTrace) {
-          debugPrint("!!!!!! FAILED TO PARSE MENU ITEM !!!!!! Document ID: ${doc.id}, Data: ${doc.data()}, Error: $e, StackTrace: $stackTrace");
-          return null;
-        }
-      }).whereType<MenuItemModel>().toList();
-      return items;
+  // ─── Orders ─────────────────────────────────────────────────────────────────
+
+  Future<String> createOrder({
+    required KraveUser user,
+    required Canteen canteen,
+    required List<Map<String, dynamic>> items,
+    required int totalAmount,
+    required String paymentId,
+    required String orderType,
+    Map<String, dynamic>? deliveryLocation,
+    Map<String, dynamic>? fees,
+  }) async {
+    final id = _uuid.v4();
+    final now = DateTime.now();
+    
+    final order = OrderModel(
+      id: id,
+      userId: user.id,
+      canteenId: canteen.id,
+      items: items,
+      totalAmount: totalAmount,
+      tokenNumber: _generateNextToken(user.name),
+      status: 'Pending',
+      timestamp: now,
+      paymentId: paymentId,
+      orderType: orderType,
+      deliveryLocation: deliveryLocation,
+      fees: fees ?? {'delivery': (orderType == 'delivery' ? 15 : 0), 'platform': 2},
+      payment: {'status': 'paid', 'method': paymentId == 'wallet' ? 'wallet' : 'external', 'txId': paymentId},
+      statusTimeline: {'Pending': now},
+      canteenName: canteen.name,
+      canteenImage: canteen.image,
+      userName: user.name,
+    );
+
+    await _db.collection('Orders').doc(id).set({
+      ...order.toMap(),
+      'timestamp': FieldValue.serverTimestamp(),
+      'statusTimeline': {'Pending': FieldValue.serverTimestamp()},
+    });
+    
+    return id;
+  }
+
+  Future<void> updateOrderStatus(String orderId, String status, {String? reason}) async {
+    final orderRef = _db.collection('Orders').doc(orderId);
+    
+    await _db.runTransaction((tx) async {
+      final snap = await tx.get(orderRef);
+      if (!snap.exists) return;
+
+      Map<String, dynamic> updateData = {
+        'status': status,
+        'updatedAt': FieldValue.serverTimestamp(),
+        'statusTimeline.$status': FieldValue.serverTimestamp(),
+      };
+
+      if (reason != null) updateData['cancellationReason'] = reason;
+      
+      tx.update(orderRef, updateData);
     });
   }
 
-  Future<void> addMenuItem(String canteenId, Map<String, dynamic> itemData) async {
-    await _db.collection('Canteens').doc(canteenId).collection('MenuItems').add({
-      ...itemData,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-  }
-
-  Future<void> updateMenuItem(String canteenId, String itemId, Map<String, dynamic> data) async {
-    await _db.collection('Canteens').doc(canteenId).collection('MenuItems').doc(itemId).update({
-      ...data,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-  }
-
-  Future<void> deleteMenuItem(String canteenId, String itemId) async {
-    await _db.collection('Canteens').doc(canteenId).collection('MenuItems').doc(itemId).delete();
-  }
-
-  Stream<QuerySnapshot> streamInventory(String canteenId) {
-    return _db.collection('Canteens').doc(canteenId).collection('Inventory').snapshots();
-  }
-
-  Future<void> addInventoryItem(String canteenId, Map<String, dynamic> itemData) async {
-    await _db.collection('Canteens').doc(canteenId).collection('Inventory').add({
-      ...itemData,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-  }
-
-  Future<void> updateInventoryItem(String canteenId, String itemId, Map<String, dynamic> data) async {
-    await _db.collection('Canteens').doc(canteenId).collection('Inventory').doc(itemId).update({
-      ...data,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-  }
-
-  Future<void> deleteInventoryItem(String canteenId, String itemId) async {
-    await _db.collection('Canteens').doc(canteenId).collection('Inventory').doc(itemId).delete();
-  }
+  // ─── Helpers ───────────────────────────────────────────────────────────────
 
   String _generateNextToken(String userName) {
     final now = DateTime.now();
     final random = Random();
-
     final namePrefix = userName.length >= 4 
         ? userName.substring(0, 4).toLowerCase()
         : userName.padRight(4, 'x').toLowerCase();
-
+    
     final randomPart = random.nextInt(100).toString().padLeft(2, '0');
-    final hourPart = now.hour.toString().padLeft(2, '0');
-    final minutePart = now.minute.toString().padLeft(2, '0');
-    final secondPart = now.second.toString().padLeft(2, '0');
-
-    return '$namePrefix-$randomPart$hourPart$minutePart$secondPart';
-  }
-
-  Future<String> createOrder({
-    required String userId,
-    required String canteenId,
-    required List<Map<String, dynamic>> items,
-    required int totalAmount,
-    required String paymentId,
-    required String orderType, // 'dineIn' or 'delivery'
-  }) async {
-    final user = await getUser(userId);
-    final userName = user?.name ?? 'user';
-
-    final tokenNumber = _generateNextToken(userName);
-    final id = _uuid.v4();
-    final data = {
-      'userId': userId,
-      'canteenId': canteenId,
-      'items': items,
-      'totalAmount': totalAmount,
-      'tokenNumber': tokenNumber,
-      'status': 'Pending',
-      'paymentId': paymentId,
-      'orderType': orderType,
-      'timestamp': FieldValue.serverTimestamp(),
-    };
-    await _db.collection('Orders').doc(id).set(data);
-    return id;
-  }
-
-  Stream<List<OrderModel>> streamAvailableDeliveryOrders() {
-    return _db.collection('Orders')
-        .where('orderType', isEqualTo: 'delivery')
-        .where('status', isEqualTo: 'Preparing')
-        .snapshots()
-        .map((s) => s.docs.map((d) => OrderModel.fromMap(d.id, d.data())).toList());
-  }
-
-  Stream<OrderModel> streamOrder(String orderId) {
-    return _db.collection('Orders').doc(orderId).snapshots().map((d) => OrderModel.fromMap(d.id, d.data()!));
-  }
-
-  Future<OrderModel?> getOrder(String orderId) async {
-    final doc = await _db.collection('Orders').doc(orderId).get();
-    if (!doc.exists) return null;
-    return OrderModel.fromMap(doc.id, doc.data()!);
-  }
-
-  Stream<List<OrderModel>> streamOrdersForCanteen(String canteenId) {
-    return _db.collection('Orders').where('canteenId', isEqualTo: canteenId).orderBy('timestamp', descending: true).snapshots().map((s) => s.docs.map((d) => OrderModel.fromMap(d.id, d.data())).toList());
+    final timePart = "${now.hour}${now.minute}${now.second}";
+    return '$namePrefix-$randomPart$timePart';
   }
 
   Stream<List<OrderModel>> streamOrdersForUser(String userId) {
-    return _db.collection('Orders').where('userId', isEqualTo: userId).orderBy('timestamp', descending: true).snapshots().map((s) => s.docs.map((d) => OrderModel.fromMap(d.id, d.data())).toList());
-  }
-
-  Future<void> updateOrderStatus(String orderId, String status) async {
-    await _db.collection('Orders').doc(orderId).update({
-      'status': status,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-  }
-
-  Future<RiderModel?> getRider(String uid) async {
-    final doc = await _db.collection('Riders').doc(uid).get();
-    if (!doc.exists) return null;
-    return RiderModel.fromMap(doc.id, doc.data()!);
-  }
-
-  Stream<RiderModel?> streamRider(String uid) {
-    return _db.collection('Riders').doc(uid).snapshots().map((d) => d.exists ? RiderModel.fromMap(d.id, d.data()!) : null);
+    return _db.collection('Orders')
+        .where('userId', isEqualTo: userId)
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .map((s) => s.docs.map((d) => OrderModel.fromMap(d.id, d.data())).toList());
   }
 }

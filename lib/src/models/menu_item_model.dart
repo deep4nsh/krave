@@ -8,6 +8,12 @@ class MenuItemModel {
   final String? category;
   final String? photoUrl;
   final bool isVeg;
+  
+  // Professional Metadata
+  final int? discountPrice;
+  final int prepTime; // estimated minutes
+  final List<String> tags; // ['Trending', 'Spicy', 'New']
+  final String? description;
 
   MenuItemModel({
     required this.id,
@@ -16,22 +22,17 @@ class MenuItemModel {
     this.available = true,
     this.category,
     this.photoUrl,
-    this.isVeg = true, // Default to veg if not specified
+    this.isVeg = true,
+    this.discountPrice,
+    this.prepTime = 10,
+    this.tags = const [],
+    this.description,
   });
 
-  // This is a robust, defensive factory constructor that will not crash.
   factory MenuItemModel.fromMap(String id, Map<String, dynamic> data) {
     try {
-      // Safely parse the price, handling int, double, or even string.
-      int parsedPrice = 0;
-      final priceRaw = data['price'];
-      if (priceRaw is int) {
-        parsedPrice = priceRaw;
-      } else if (priceRaw is double) {
-        parsedPrice = priceRaw.toInt();
-      } else if (priceRaw is String) {
-        parsedPrice = int.tryParse(priceRaw) ?? 0;
-      }
+      int parsedPrice = (data['price'] ?? 0).toInt();
+      int? parsedDiscount = data['discountPrice'] != null ? (data['discountPrice'] as num).toInt() : null;
 
       return MenuItemModel(
         id: id,
@@ -41,18 +42,14 @@ class MenuItemModel {
         category: data['category'] as String?,
         photoUrl: data['photoUrl'] as String?,
         isVeg: data['isVeg'] as bool? ?? true,
+        discountPrice: parsedDiscount,
+        prepTime: (data['prepTime'] ?? 10).toInt(),
+        tags: List<String>.from(data['tags'] ?? []),
+        description: data['description'] as String?,
       );
     } catch (e) {
-      debugPrint('!!!!!! FAILED TO PARSE MenuItemModel !!!!!!');
-      debugPrint('Document ID: $id | Data: $data');
-      debugPrint('Error: $e');
-      // Return a default/error state object instead of crashing
-      return MenuItemModel(
-        id: id,
-        name: 'Error: Invalid Data',
-        price: 0,
-        category: 'Error',
-      );
+      debugPrint('!!!!!! FAILED TO PARSE MenuItemModel !!!!!! ID: $id | Error: $e');
+      return MenuItemModel(id: id, name: 'Error: Invalid Data', price: 0);
     }
   }
 
@@ -63,5 +60,9 @@ class MenuItemModel {
     'category': category,
     'photoUrl': photoUrl,
     'isVeg': isVeg,
+    'discountPrice': discountPrice,
+    'prepTime': prepTime,
+    'tags': tags,
+    'description': description,
   };
 }

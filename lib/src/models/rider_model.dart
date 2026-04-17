@@ -10,12 +10,16 @@ class RiderModel {
   final DateTime createdAt;
 
   final String status; // 'onboarding', 'pending_approval', 'active', 'suspended'
-  final int onboardingStep; // 1 to 6
-  final String? vehicleType; // bike, cycle, scooter
+  final int onboardingStep;
+  final String? vehicleType;
   final String? city;
   final Map<String, dynamic> kycDetails;
-  final int trainingScore;
-  final bool agreementAccepted;
+  
+  // Professional Stats
+  final double rating;
+  final int totalDeliveries;
+  final int totalEarnings; // in Paisa or lowest currency unit
+  final Map<String, dynamic>? currentLocation; // { lat, lng, updatedAt }
 
   RiderModel({
     required this.id,
@@ -30,8 +34,10 @@ class RiderModel {
     this.vehicleType,
     this.city,
     this.kycDetails = const {},
-    this.trainingScore = 0,
-    this.agreementAccepted = false,
+    this.rating = 0.0,
+    this.totalDeliveries = 0,
+    this.totalEarnings = 0,
+    this.currentLocation,
   });
 
   factory RiderModel.fromMap(String id, Map<String, dynamic> m) {
@@ -48,8 +54,10 @@ class RiderModel {
       vehicleType: m['vehicleType'] as String?,
       city: m['city'] as String?,
       kycDetails: m['kycDetails'] as Map<String, dynamic>? ?? {},
-      trainingScore: m['trainingScore'] as int? ?? 0,
-      agreementAccepted: m['agreementAccepted'] as bool? ?? false,
+      rating: (m['rating'] ?? 0.0).toDouble(),
+      totalDeliveries: (m['totalDeliveries'] ?? 0).toInt(),
+      totalEarnings: (m['totalEarnings'] ?? 0).toInt(),
+      currentLocation: m['currentLocation'] as Map<String, dynamic>?,
     );
   }
 
@@ -65,38 +73,40 @@ class RiderModel {
         'vehicleType': vehicleType,
         'city': city,
         'kycDetails': kycDetails,
-        'trainingScore': trainingScore,
-        'agreementAccepted': agreementAccepted,
+        'rating': rating,
+        'totalDeliveries': totalDeliveries,
+        'totalEarnings': totalEarnings,
+        'currentLocation': currentLocation,
       };
 
   RiderModel copyWith({
     String? name,
-    String? email,
     bool? isActive,
     String? fcmToken,
     String? status,
     int? onboardingStep,
-    String? vehicleType,
-    String? city,
-    Map<String, dynamic>? kycDetails,
-    int? trainingScore,
-    bool? agreementAccepted,
+    double? rating,
+    int? totalDeliveries,
+    int? totalEarnings,
+    Map<String, dynamic>? currentLocation,
   }) {
     return RiderModel(
       id: id,
       name: name ?? this.name,
-      email: email ?? this.email,
+      email: email,
       phone: phone,
       isActive: isActive ?? this.isActive,
       fcmToken: fcmToken ?? this.fcmToken,
       createdAt: createdAt,
       status: status ?? this.status,
       onboardingStep: onboardingStep ?? this.onboardingStep,
-      vehicleType: vehicleType ?? this.vehicleType,
-      city: city ?? this.city,
-      kycDetails: kycDetails ?? this.kycDetails,
-      trainingScore: trainingScore ?? this.trainingScore,
-      agreementAccepted: agreementAccepted ?? this.agreementAccepted,
+      vehicleType: vehicleType,
+      city: city,
+      kycDetails: kycDetails,
+      rating: rating ?? this.rating,
+      totalDeliveries: totalDeliveries ?? this.totalDeliveries,
+      totalEarnings: totalEarnings ?? this.totalEarnings,
+      currentLocation: currentLocation ?? this.currentLocation,
     );
   }
 }
