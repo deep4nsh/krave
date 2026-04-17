@@ -170,10 +170,10 @@ class FirebaseService {
 
   // ─── Orders ─────────────────────────────────────────────────────────────────
 
-  /// Live feed of active orders (Pending + Preparing + Ready for Pickup)
   Stream<List<OrderModel>> streamActiveOrders() {
     return _db
         .collection(FirestoreCollections.orders)
+        .where('orderType', isEqualTo: 'delivery')
         .where('status', whereIn: OrderStatus.active)
         .orderBy('timestamp', descending: false)
         .snapshots()

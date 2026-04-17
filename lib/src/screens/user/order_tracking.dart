@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../models/order_model.dart';
 import '../../models/rider_model.dart';
 import '../../services/firestore_service.dart';
-import '../../widgets/gradient_background.dart';
-import '../../widgets/glass_container.dart';
+import '../../theme/app_colors.dart';
 
-class OrderTracking extends StatelessWidget {
+class OrderTrackingScreen extends StatelessWidget {
   final String orderId;
-  const OrderTracking({super.key, required this.orderId});
+  const OrderTrackingScreen({super.key, required this.orderId});
 
   @override
   Widget build(BuildContext context) {
@@ -17,171 +18,149 @@ class OrderTracking extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('Track Order', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        title: Text('Track Order', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.textHigh)),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textHigh, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
-      body: GradientBackground(
-        child: StreamBuilder<OrderModel>(
-          stream: fs.streamOrder(orderId),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError || !snapshot.hasData) {
-              return const Center(child: Text('Could not load order details.'));
-            }
+      body: StreamBuilder<OrderModel>(
+        stream: fs.streamOrder(orderId),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+          }
+          if (snapshot.hasError || !snapshot.hasData) {
+            return const Center(child: Text('Could not load order details.', style: TextStyle(color: AppColors.textLow)));
+          }
 
-            final order = snapshot.data!;
+          final order = snapshot.data!;
 
-            return CustomScrollView(
-              physics: const BouncingScrollPhysics(),
-              slivers: [
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 120, 20, 24),
-                  sliver: SliverToBoxAdapter(
-                    child: _buildTokenSection(context, order.tokenNumber),
-                  ),
+          return CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                sliver: SliverToBoxAdapter(
+                  child: _OrderSuccessHeader(order: order).animate().fadeIn().scale(curve: Curves.easeOutBack),
                 ),
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  sliver: SliverToBoxAdapter(
-                    child: _buildStatusTimeline(context, order.status),
-                  ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                sliver: SliverToBoxAdapter(
+                  child: _StatusTimeline(currentStatus: order.status, orderType: order.orderType),
                 ),
+              ),
+              if (order.riderId != null)
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(20, 32, 20, 0),
                   sliver: SliverToBoxAdapter(
-                    child: order.riderId != null 
-                      ? _buildRiderInfo(context, order.riderId!, fs)
-                      : const SizedBox.shrink(),
+                    child: _RiderCard(riderId: order.riderId!, fs: fs),
                   ),
                 ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
-                  sliver: SliverToBoxAdapter(
-                    child: _buildOrderDetails(context, order),
-                  ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
+                sliver: SliverToBoxAdapter(
+                  child: _OrderSummaryCard(order: order),
                 ),
-              ],
-            );
-          },
-        ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
+}
 
-  Widget _buildRiderInfo(BuildContext context, String riderId, FirestoreService fs) {
-    final theme = Theme.of(context);
-    return StreamBuilder<RiderModel?>(
-      stream: fs.streamRider(riderId),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) return const SizedBox.shrink();
-        final rider = snapshot.data!;
-        
-        return GlassContainer(
-          padding: const EdgeInsets.all(20),
-          borderRadius: BorderRadius.circular(24),
-          color: Colors.green,
-          opacity: 0.1,
-          child: Row(
+class _OrderSuccessHeader extends StatelessWidget {
+  final OrderModel order;
+  const _OrderSuccessHeader({required this.order});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(32),
+        border: Border.all(color: AppColors.glassBorder),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('ORDER TOKEN', style: TextStyle(color: AppColors.textLow, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+                  const SizedBox(height: 8),
+                  Text(
+                    order.tokenNumber,
+                    style: GoogleFonts.outfit(fontSize: 42, fontWeight: FontWeight.black, color: AppColors.primary),
+                  ),
+                ],
+              ),
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.2),
-                  shape: BoxShape.circle,
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Icon(Icons.delivery_dining, color: Colors.green),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Rider Assigned',
-                      style: theme.textTheme.labelMedium?.copyWith(color: Colors.green, fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      rider.name,
-                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      rider.phone,
-                      style: theme.textTheme.bodySmall?.copyWith(color: Colors.white54),
-                    ),
-                  ],
+                child: QrImageView(
+                  data: order.id,
+                  version: QrVersions.auto,
+                  size: 80.0,
+                  eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Colors.black),
                 ),
-              ),
-              IconButton(
-                onPressed: () {}, // For future: launch caller
-                icon: const Icon(Icons.phone, color: Colors.green),
               ),
             ],
           ),
-        );
-      },
-    );
-  }
-
-  Widget _buildTokenSection(BuildContext context, String tokenNumber) {
-    final theme = Theme.of(context);
-    return GlassContainer(
-      padding: const EdgeInsets.symmetric(vertical: 32),
-      borderRadius: BorderRadius.circular(32),
-      color: theme.colorScheme.primary,
-      opacity: 0.9,
-      child: Column(
-        children: [
-          Text(
-            'YOUR TOKEN',
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: Colors.black.withOpacity(0.6),
-              fontWeight: FontWeight.bold,
-              letterSpacing: 2,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            tokenNumber,
-            style: GoogleFonts.outfit(
-              fontSize: 72,
-              fontWeight: FontWeight.w900,
-              color: Colors.black,
-              letterSpacing: 2,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Text(
-              'Show this at the counter',
-              style: TextStyle(color: Colors.black54, fontWeight: FontWeight.w600),
-            ),
+          const Divider(height: 48, color: AppColors.glassBorder),
+          Row(
+            children: [
+              Icon(
+                order.orderType == 'dineIn' ? Icons.restaurant_rounded : Icons.delivery_dining_rounded,
+                color: AppColors.textMed,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                order.orderType == 'dineIn' ? 'Dine-in at Canteen' : 'Delivery to your spot',
+                style: const TextStyle(color: AppColors.textMed, fontWeight: FontWeight.w500),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildStatusTimeline(BuildContext context, String currentStatus) {
-    final theme = Theme.of(context);
-    const statuses = ['Pending', 'Preparing', 'Ready for Pickup', 'Completed'];
+class _StatusTimeline extends StatelessWidget {
+  final String currentStatus;
+  final String orderType;
+
+  const _StatusTimeline({required this.currentStatus, required this.orderType});
+
+  @override
+  Widget build(BuildContext context) {
+    final statuses = orderType == 'delivery' 
+        ? ['Pending', 'Preparing', 'Out for Delivery', 'Completed']
+        : ['Pending', 'Preparing', 'Ready for Pickup', 'Completed'];
+    
     final currentIndex = statuses.indexOf(currentStatus);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Live Updates',
-          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+        const Text(
+          'Live Tracking',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textHigh),
         ),
         const SizedBox(height: 24),
         ...List.generate(statuses.length, (index) {
@@ -199,11 +178,8 @@ class OrderTracking extends StatelessWidget {
                       height: 24,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: isCompleted ? theme.colorScheme.primary : theme.colorScheme.surface.withOpacity(0.1),
-                        border: isCurrent ? Border.all(color: Colors.white, width: 2) : null,
-                        boxShadow: isCurrent ? [
-                          BoxShadow(color: theme.colorScheme.primary.withOpacity(0.4), blurRadius: 10, spreadRadius: 2)
-                        ] : null,
+                        color: isCompleted ? AppColors.primary : AppColors.surface,
+                        border: isCurrent ? Border.all(color: Colors.white, width: 2) : Border.all(color: AppColors.glassBorder),
                       ),
                       child: isCompleted && !isCurrent
                           ? const Icon(Icons.check, size: 14, color: Colors.black)
@@ -213,7 +189,7 @@ class OrderTracking extends StatelessWidget {
                       Expanded(
                         child: Container(
                           width: 2,
-                          color: index < currentIndex ? theme.colorScheme.primary : Colors.white10,
+                          color: index < currentIndex ? AppColors.primary : AppColors.glassBorder,
                         ),
                       ),
                   ],
@@ -227,17 +203,18 @@ class OrderTracking extends StatelessWidget {
                       children: [
                         Text(
                           statuses[index],
-                          style: theme.textTheme.titleMedium?.copyWith(
+                          style: TextStyle(
+                            fontSize: 16,
                             fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
-                            color: isCompleted ? Colors.white : Colors.white24,
+                            color: isCompleted ? AppColors.textHigh : AppColors.textLow,
                           ),
                         ),
                         if (isCurrent) ...[
                           const SizedBox(height: 4),
                           Text(
-                            _getStatusDescription(statuses[index]),
-                            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.primary.withOpacity(0.8)),
-                          ),
+                            _getStatusDesc(statuses[index]),
+                            style: const TextStyle(color: AppColors.primary, fontSize: 13),
+                          ).animate().fadeIn().slideX(begin: -0.1),
                         ],
                       ],
                     ),
@@ -251,52 +228,103 @@ class OrderTracking extends StatelessWidget {
     );
   }
 
-  String _getStatusDescription(String status) {
+  String _getStatusDesc(String status) {
     switch (status) {
-      case 'Pending': return 'We\'ve received your order and notifying the chef.';
-      case 'Preparing': return 'Your meal is being prepared with care.';
-      case 'Ready for Pickup': return 'Hot and fresh! Please collect your order.';
-      case 'Completed': return 'Hope you enjoyed your meal!';
+      case 'Pending': return 'We\'ve got your order! Notifying the chef...';
+      case 'Preparing': return 'Your fuel is being prepared by the pros.';
+      case 'Out for Delivery': return 'The rider is zooming to your location!';
+      case 'Ready for Pickup': return 'Hot and fresh! Grab it from the counter.';
+      case 'Completed': return 'Order complete. High-five?';
       default: return 'Processing...';
     }
   }
+}
 
-  Widget _buildOrderDetails(BuildContext context, OrderModel order) {
-    final theme = Theme.of(context);
-    return GlassContainer(
+class _RiderCard extends StatelessWidget {
+  final String riderId;
+  final FirestoreService fs;
+
+  const _RiderCard({required this.riderId, required this.fs});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<RiderModel?>(
+      stream: fs.streamRider(riderId),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return const SizedBox.shrink();
+        final rider = snapshot.data!;
+        
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: AppColors.primary.withOpacity(0.2),
+                radius: 24,
+                child: const Icon(Icons.delivery_dining_rounded, color: AppColors.primary),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('YOUR RIDER', style: TextStyle(color: AppColors.primary, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                    Text(rider.name, style: const TextStyle(color: AppColors.textHigh, fontWeight: FontWeight.bold, fontSize: 16)),
+                  ],
+                ),
+              ),
+              IconButton.filledTonal(
+                onPressed: () {},
+                icon: const Icon(Icons.phone_in_talk_rounded, size: 20),
+                style: IconButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.black),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _OrderSummaryCard extends StatelessWidget {
+  final OrderModel order;
+  const _OrderSummaryCard({required this.order});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
       padding: const EdgeInsets.all(24),
-      borderRadius: BorderRadius.circular(24),
-      opacity: 0.05,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.glassBorder),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Order Summary', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+          const Text('Order Items', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textHigh)),
           const SizedBox(height: 20),
           ...order.items.map((item) => Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  '${item['quantity'] ?? item['qty']}x ${item['name']}',
-                  style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
-                ),
-                Text('₹${item['price']}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text('${item['quantity']}x ${item['name']}', style: const TextStyle(color: AppColors.textMed)),
+                Text('₹${item['price']}', style: const TextStyle(color: AppColors.textHigh, fontWeight: FontWeight.w600)),
               ],
             ),
           )),
-          const Divider(height: 32, color: Colors.white10),
+          const Divider(height: 32, color: AppColors.glassBorder),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Total Paid', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              Text(
-                '₹${order.totalAmount}',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: theme.colorScheme.primary,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              const Text('Total Paid', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textHigh)),
+              Text('₹${order.totalAmount}', style: const TextStyle(color: AppColors.primary, fontSize: 18, fontWeight: FontWeight.bold)),
             ],
           ),
         ],

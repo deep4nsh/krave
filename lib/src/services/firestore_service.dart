@@ -252,6 +252,7 @@ class FirestoreService {
     required List<Map<String, dynamic>> items,
     required int totalAmount,
     required String paymentId,
+    required String orderType, // 'dineIn' or 'delivery'
   }) async {
     final user = await getUser(userId);
     final userName = user?.name ?? 'user';
@@ -266,10 +267,19 @@ class FirestoreService {
       'tokenNumber': tokenNumber,
       'status': 'Pending',
       'paymentId': paymentId,
+      'orderType': orderType,
       'timestamp': FieldValue.serverTimestamp(),
     };
     await _db.collection('Orders').doc(id).set(data);
     return id;
+  }
+
+  Stream<List<OrderModel>> streamAvailableDeliveryOrders() {
+    return _db.collection('Orders')
+        .where('orderType', isEqualTo: 'delivery')
+        .where('status', isEqualTo: 'Preparing')
+        .snapshots()
+        .map((s) => s.docs.map((d) => OrderModel.fromMap(d.id, d.data())).toList());
   }
 
   Stream<OrderModel> streamOrder(String orderId) {

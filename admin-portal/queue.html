@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Krave | Live Kitchen Queue</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    body { background: #020617; overflow: hidden; }
+    .queue-status-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      padding: 12px 24px; background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(12px); border-top: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+      color: var(--text-muted); font-size: 14px; font-weight: 600;
+    }
+    .pulse {
+      width: 8px; height: 8px; background: var(--accent);
+      border-radius: 50%; display: inline-block; margin-right: 8px;
+      box-shadow: 0 0 10px var(--accent);
+      animation: pulse-ring 1.5s infinite;
+    }
+    @keyframes pulse-ring { 
+      0% { transform: scale(0.8); opacity: 0.5; } 
+      50% { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(0.8); opacity: 0.5; }
+    }
+  </style>
+</head>
+<body>
+  <div class="queue-container">
+    <!-- Preparing Column -->
+    <div class="queue-col">
+      <div class="queue-header">
+        <h2 style="color: var(--text-secondary)">Preparing</h2>
+        <p style="color: var(--text-muted); font-size: 14px; margin-top: 4px;">Chef is working on these</p>
+      </div>
+      <div id="preparing-list" class="queue-body">
+        <!-- Tokens will be injected here -->
+      </div>
+    </div>
+
+    <!-- Ready Column -->
+    <div class="queue-col" style="border-color: var(--accent-dim);">
+      <div class="queue-header" style="background: var(--accent-dim);">
+        <h2 style="color: var(--accent)">Ready for Pickup</h2>
+        <p style="color: var(--accent-hover); font-size: 14px; margin-top: 4px;">Please collect your meal</p>
+      </div>
+      <div id="ready-list" class="queue-body">
+        <!-- Tokens will be injected here -->
+      </div>
+    </div>
+  </div>
+
+  <div class="queue-status-bar">
+    <div><span class="pulse"></span> LIVE KITCHEN QUEUE</div>
+    <div id="current-time">--:--:--</div>
+  </div>
+
+  <script type="module">
+    import { db } from './js/firebase-config.js';
+    import { collection, query, where, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const preparingList = document.getElementById('preparing-list');
+    const readyList = document.getElementById('ready-list');
+    const clock = document.getElementById('current-time');
+
+    // Live Clock
+    setInterval(() => {
+      clock.innerText = new Date().toLocaleTimeString();
+    }, 1000);
+
+    // Stream Orders
+    const q = query(
+      collection(db, "orders"), 
+      where("status", "in", ["Preparing", "Ready for Pickup"]),
+      orderBy("timestamp", "asc")
+    );
+
+    onSnapshot(q, (snap) => {
+      preparingList.innerHTML = '';
+      readyList.innerHTML = '';
+
+      snap.forEach(doc => {
+        const order = doc.data();
+        const card = document.createElement('div');
+        card.className = `token-card ${order.status === 'Ready for Pickup' ? 'token-ready' : 'token-preparing'}`;
+        card.innerText = order.tokenNumber || '??';
+
+        if (order.status === 'Preparing') {
+          preparingList.appendChild(card);
+        } else {
+          readyList.appendChild(card);
+        }
+      });
+
+      // Handle empty states
+      if (preparingList.innerHTML === '') preparingList.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); margin-top: 40px; font-weight: 500;">No active prep</div>';
+      if (readyList.innerHTML === '') readyList.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); margin-top: 40px; font-weight: 500;">Nothing ready yet</div>';
+    });
+  </script>
+</body>
+</html>

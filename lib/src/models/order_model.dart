@@ -12,6 +12,7 @@ class OrderModel {
   final DateTime timestamp;
   final String paymentId;
   final String? riderId;
+  final String orderType; // 'dineIn' or 'delivery'
 
   OrderModel({
     required this.id,
@@ -23,6 +24,7 @@ class OrderModel {
     required this.status,
     required this.timestamp,
     required this.paymentId,
+    required this.orderType,
     this.riderId,
   });
 
@@ -38,6 +40,7 @@ class OrderModel {
       timestamp: (m['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
       paymentId: m['paymentId'] ?? '',
       riderId: m['riderId'],
+      orderType: m['orderType'] ?? 'delivery',
     );
   }
 
@@ -51,6 +54,7 @@ class OrderModel {
     'timestamp': timestamp,
     'paymentId': paymentId,
     'riderId': riderId,
+    'orderType': orderType,
   };
 
   /// Human-readable items summary e.g. "2x Chole Bhature, 1x Burger"

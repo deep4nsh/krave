@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../providers/auth_provider.dart';
 import '../providers/order_provider.dart';
 import '../theme/app_theme.dart';
@@ -21,7 +23,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Start real-time listeners
     final orders = context.read<OrderProvider>();
     orders.listenActiveOrders();
     orders.listenAllOrders();
@@ -39,44 +40,43 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
 
     return Scaffold(
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Krave Rider',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+            Text('Krave Rider',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18)),
             if (rider != null)
-              Text(rider.name,
-                  style: const TextStyle(
-                      fontSize: 13,
-                      color: AppTheme.textSecondary,
-                      fontWeight: FontWeight.w400)),
+              Text(rider.name.toUpperCase(),
+                  style: GoogleFonts.outfit(
+                      fontSize: 10,
+                      color: AppTheme.primary,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.5)),
           ],
         ),
         actions: [
-          // Online / Offline toggle
           if (_tab == 0 && rider != null)
             Padding(
-              padding: const EdgeInsets.only(right: 12),
+              padding: const EdgeInsets.only(right: 16),
               child: Row(
                 children: [
                   Text(
-                    rider.isActive ? 'Online' : 'Offline',
-                    style: TextStyle(
-                      color: rider.isActive
-                          ? AppTheme.accentGreen
-                          : AppTheme.textMuted,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
+                    rider.isActive ? 'ONLINE' : 'OFFLINE',
+                    style: GoogleFonts.outfit(
+                      color: rider.isActive ? AppTheme.primary : AppColors.textLow,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1,
                     ),
                   ),
                   const SizedBox(width: 8),
                   Switch.adaptive(
                     value: rider.isActive,
                     onChanged: (v) => auth.toggleActive(v),
-                    activeTrackColor: AppTheme.accentGreen,
-                    inactiveThumbColor: AppTheme.textMuted,
-                    inactiveTrackColor: AppTheme.surfaceVariant,
+                    activeColor: AppTheme.primary,
+                    activeTrackColor: AppTheme.primary.withOpacity(0.3),
                   ),
                 ],
               ),
@@ -91,13 +91,13 @@ class _HomeScreenState extends State<HomeScreen> {
         child: BottomNavigationBar(
           currentIndex: _tab,
           onTap: (i) => setState(() => _tab = i),
+          backgroundColor: AppTheme.background,
+          selectedLabelStyle: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 12),
+          unselectedLabelStyle: GoogleFonts.outfit(fontSize: 12),
           items: const [
-            BottomNavigationBarItem(
-                icon: Icon(Icons.bolt_rounded), label: 'Live Orders'),
-            BottomNavigationBarItem(
-                icon: Icon(Icons.history_rounded), label: 'History'),
-            BottomNavigationBarItem(
-                icon: Icon(Icons.person_rounded), label: 'Profile'),
+            BottomNavigationBarItem(icon: Icon(Icons.bolt_rounded), label: 'Live'),
+            BottomNavigationBarItem(icon: Icon(Icons.history_rounded), label: 'History'),
+            BottomNavigationBarItem(icon: Icon(Icons.person_rounded), label: 'Me'),
           ],
         ),
       ),
@@ -114,34 +114,33 @@ class _LiveFeedPage extends StatelessWidget {
     final auth = context.watch<AuthProvider>();
     final rider = auth.rider;
 
-    if (!rider!.isActive) {
+    if (rider == null) return const SizedBox.shrink();
+
+    if (!rider.isActive) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 80,
-              height: 80,
+              width: 100,
+              height: 100,
               decoration: BoxDecoration(
-                color: AppTheme.surfaceVariant,
-                borderRadius: BorderRadius.circular(20),
+                color: AppTheme.surface,
+                borderRadius: BorderRadius.circular(30),
+                border: Border.all(color: AppTheme.border),
               ),
-              child: const Icon(Icons.power_settings_new_rounded,
-                  size: 40, color: AppTheme.textMuted),
-            ),
-            const SizedBox(height: 20),
-            const Text('You\'re Offline',
-                style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.textPrimary)),
+              child: const Icon(Icons.power_settings_new_rounded, size: 40, color: AppColors.textLow),
+            ).animate().shake(delay: 500.ms),
+            const SizedBox(height: 24),
+            Text('You\'re Currently Offline',
+                style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
             const SizedBox(height: 8),
-            const Text('Toggle the switch above to go online\nand start receiving orders.',
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+            Text('Go online to start receiving\ndelivery requests.',
+                style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: 14),
                 textAlign: TextAlign.center),
           ],
         ),
-      );
+      ).animate().fadeIn();
     }
 
     final activeOrders = orders.activeOrders;
@@ -152,71 +151,70 @@ class _LiveFeedPage extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 80,
-              height: 80,
+              width: 100,
+              height: 100,
               decoration: BoxDecoration(
-                color: AppTheme.accentGreen.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
+                color: AppTheme.primary.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(30),
+                border: Border.all(color: AppTheme.primary.withOpacity(0.2)),
               ),
-              child: const Icon(Icons.check_circle_outline_rounded,
-                  size: 40, color: AppTheme.accentGreen),
-            ),
-            const SizedBox(height: 20),
-            const Text('All Clear!',
-                style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.textPrimary)),
+              child: const Icon(Icons.celebration_rounded, size: 40, color: AppTheme.primary),
+            ).animate().scale(delay: 200.ms, curve: Curves.easeOutBack),
+            const SizedBox(height: 24),
+            Text('The Deck is Clear!',
+                style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
             const SizedBox(height: 8),
-            const Text('No active orders right now.\nNew orders will appear here instantly.',
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+            Text('New delivery orders will appear\nhere automatically.',
+                style: GoogleFonts.outfit(color: AppTheme.textSecondary, fontSize: 14),
                 textAlign: TextAlign.center),
           ],
         ),
-      );
+      ).animate().fadeIn();
     }
 
     return Column(
       children: [
-        // Summary banner
         Container(
-          margin: const EdgeInsets.all(16),
+          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: AppTheme.accentGreen.withOpacity(0.08),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.accentGreen.withOpacity(0.25)),
+            color: AppTheme.primary.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppTheme.primary.withOpacity(0.2)),
           ),
           child: Row(
             children: [
-              const Icon(Icons.bolt_rounded,
-                  color: AppTheme.accentGreen, size: 18),
-              const SizedBox(width: 8),
+              const Icon(Icons.notifications_active_rounded, color: AppTheme.primary, size: 18),
+              const SizedBox(width: 12),
               Text(
-                '${activeOrders.length} active order${activeOrders.length > 1 ? 's' : ''}',
-                style: const TextStyle(
-                    color: AppTheme.accentGreen,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14),
+                '${activeOrders.length} DELIVERY TASK${activeOrders.length > 1 ? 'S' : ''} ACTIVE',
+                style: GoogleFonts.outfit(
+                    color: AppTheme.primary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    letterSpacing: 1),
               ),
             ],
           ),
-        ),
+        ).animate().slideX(begin: -0.1).fadeIn(),
         Expanded(
           child: ListView.builder(
-            padding: const EdgeInsets.only(bottom: 24),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
             itemCount: activeOrders.length,
             itemBuilder: (ctx, i) {
               final o = activeOrders[i];
-              return OrderCard(
-                order: o,
-                canteenName: orders.canteenName(o.canteenId),
-                onTap: () => Navigator.push(
-                  ctx,
-                  MaterialPageRoute(
-                    builder: (_) => OrderDetailScreen(orderId: o.id),
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: OrderCard(
+                  order: o,
+                  canteenName: orders.canteenName(o.canteenId),
+                  onTap: () => Navigator.push(
+                    ctx,
+                    MaterialPageRoute(
+                      builder: (_) => OrderDetailScreen(orderId: o.id),
+                    ),
                   ),
-                ),
+                ).animate().slideY(begin: 0.2, delay: (100 * i).ms).fadeIn(),
               );
             },
           ),
@@ -224,4 +222,9 @@ class _LiveFeedPage extends StatelessWidget {
       ],
     );
   }
+}
+
+// Minimal local color helper to avoid cyclic dependency if AppColors was moved
+class AppColors {
+  static const Color textLow = Color(0xFF64748B);
 }
