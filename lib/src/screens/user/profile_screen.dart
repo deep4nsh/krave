@@ -8,6 +8,7 @@ import '../../widgets/gradient_background.dart';
 import '../../widgets/glass_container.dart';
 import '../../theme/app_colors.dart';
 import '../auth/login_screen.dart';
+import 'transfer_money_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -122,15 +123,16 @@ class ProfileScreen extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: ElevatedButton(
-                  onPressed: () => provider.topUpWallet(500),
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TransferMoneyScreen())),
+                  icon: const Icon(Icons.send_rounded, size: 18),
+                  label: const Text('Send Money', style: TextStyle(fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.black,
+                    backgroundColor: Colors.indigoAccent,
+                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
-                  child: const Text('Top-up ₹500', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
               const SizedBox(width: 12),
@@ -139,8 +141,8 @@ class ProfileScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                   opacity: 0.05,
                   child: TextButton(
-                    onPressed: () {},
-                    child: const Text('History', style: TextStyle(color: Colors.white70)),
+                    onPressed: () => provider.topUpWallet(500),
+                    child: const Text('Top-up ₹500', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ),

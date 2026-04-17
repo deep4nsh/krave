@@ -57,27 +57,38 @@
     <div id="current-time">--:--:--</div>
   </div>
 
+  <audio id="newOrderSound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+
   <script type="module">
     import { db } from './js/firebase-config.js';
     import { collection, query, where, onSnapshot, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { ORDER_STATUS, COLLECTIONS } from './js/constants.js';
 
     const preparingList = document.getElementById('preparing-list');
     const readyList = document.getElementById('ready-list');
     const clock = document.getElementById('current-time');
+    const newOrderSound = document.getElementById('newOrderSound');
+    let lastOrderCount = -1;
 
     // Live Clock
     setInterval(() => {
       clock.innerText = new Date().toLocaleTimeString();
     }, 1000);
 
-    // Stream Orders
+    // Stream Orders: Using standardized COLLECTIONS.ORDERS and ORDER_STATUS
     const q = query(
-      collection(db, "Orders"), 
-      where("status", "in", ["Preparing", "Ready for Pickup", "Out for Delivery"]),
-      orderBy("timestamp", "asc")
+      collection(db, COLLECTIONS.ORDERS), 
+      where("status", "in", [ORDER_STATUS.PREPARING, ORDER_STATUS.READY_FOR_PICKUP, ORDER_STATUS.OUT_FOR_DELIVERY]),
+      orderBy("createdAt", "asc")
     );
 
     onSnapshot(q, (snap) => {
+      // Play 'Ding' for new orders
+      if (lastOrderCount !== -1 && snap.size > lastOrderCount) {
+        newOrderSound.play().catch(e => console.log("Audio play blocked: ", e));
+      }
+      lastOrderCount = snap.size;
+
       preparingList.innerHTML = '';
       readyList.innerHTML = '';
 

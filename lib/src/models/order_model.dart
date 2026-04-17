@@ -8,7 +8,7 @@ class OrderModel {
   final int totalAmount;
   final String tokenNumber;
   final String status; // 'Pending', 'Preparing', 'Ready for Pickup', 'Out for Delivery', 'Completed', 'Cancelled'
-  final DateTime timestamp;
+  final DateTime createdAt;
   final String paymentId;
   final String orderType; // 'dineIn' or 'delivery'
   final String? riderId;
@@ -58,24 +58,24 @@ class OrderModel {
 
     return OrderModel(
       id: id,
-      userId: m['userId'] ?? '',
-      canteenId: m['canteenId'] ?? '',
-      items: List<Map<String, dynamic>>.from(m['items'] ?? []),
-      totalAmount: (m['totalAmount'] ?? 0).toInt(),
-      tokenNumber: m['tokenNumber'] ?? '',
-      status: m['status'] ?? 'Pending',
-      timestamp: (m['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      paymentId: m['paymentId'] ?? '',
-      orderType: m['orderType'] ?? 'delivery',
-      riderId: m['riderId'],
-      fees: Map<String, dynamic>.from(m['fees'] ?? {}),
-      payment: Map<String, dynamic>.from(m['payment'] ?? {}),
+      userId: data['userId'] ?? '',
+      canteenId: data['canteenId'] ?? '',
+      items: List<Map<String, dynamic>>.from(data['items'] ?? []),
+      totalAmount: (data['totalAmount'] ?? 0).toInt(),
+      tokenNumber: data['tokenNumber'] ?? '',
+      status: data['status'] as String? ?? 'Pending',
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      paymentId: data['paymentId'] as String? ?? '',
+      orderType: data['orderType'] as String? ?? 'dineIn',
+      riderId: data['riderId'] as String?,
+      deliveryLocation: data['deliveryLocation'] as Map<String, dynamic>?,
+      fees: data['fees'] ?? {'delivery': 0, 'platform': 2},
+      payment: data['payment'] ?? {'status': 'pending', 'method': 'external'},
       statusTimeline: timeline,
-      deliveryLocation: m['deliveryLocation'] != null ? Map<String, dynamic>.from(m['deliveryLocation']) : null,
-      canteenName: m['canteenName'] ?? 'Canteen',
-      canteenImage: m['canteenImage'],
-      userName: m['userName'] ?? 'User',
-      cancellationReason: m['cancellationReason'],
+      canteenName: data['canteenName'] ?? 'Canteen',
+      canteenImage: data['canteenImage'],
+      userName: data['userName'] ?? 'User',
+      cancellationReason: data['cancellationReason'],
     );
   }
 
@@ -86,14 +86,14 @@ class OrderModel {
     'totalAmount': totalAmount,
     'tokenNumber': tokenNumber,
     'status': status,
-    'timestamp': timestamp,
+    'createdAt': createdAt,
     'paymentId': paymentId,
     'orderType': orderType,
     'riderId': riderId,
+    'deliveryLocation': deliveryLocation,
     'fees': fees,
     'payment': payment,
     'statusTimeline': statusTimeline,
-    'deliveryLocation': deliveryLocation,
     'canteenName': canteenName,
     'canteenImage': canteenImage,
     'userName': userName,

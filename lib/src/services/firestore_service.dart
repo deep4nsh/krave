@@ -58,6 +58,74 @@ class FirestoreService {
 
   // ─── Wallet System ────────────────────────────────────────────────────────
 
+  Future<void> transferWalletBalance({
+    required String senderId,
+    required String receiverPhone,
+    required double amount,
+  }) async {
+    // 1. Find receiver by phone
+    final receiverSnap = await _db.collection('Users')
+        .where('phone', isEqualTo: receiverPhone)
+        .limit(1)
+        .get();
+        
+    if (receiverSnap.docs.isEmpty) throw Exception('No student found with this phone number.');
+    final receiverId = receiverSnap.docs.first.id;
+    final receiverName = receiverSnap.docs.first.data()['name'] ?? 'Student';
+
+    if (senderId == receiverId) throw Exception('You cannot send money to yourself!');
+
+    final senderRef = _db.collection('Users').doc(senderId);
+    final receiverRef = _db.collection('Users').doc(receiverId);
+    final debitTxRef = _db.collection('Transactions').doc();
+    final creditTxRef = _db.collection('Transactions').doc();
+
+    await _db.runTransaction((tx) async {
+      final senderDoc = await tx.get(senderRef);
+      final receiverDoc = await tx.get(receiverRef);
+      
+      if (!senderDoc.exists) throw Exception('Sender not found');
+      if (!receiverDoc.exists) throw Exception('Receiver not found');
+      
+      final senderBalance = (senderDoc.data()?['walletBalance'] ?? 0.0).toDouble();
+      final receiverBalance = (receiverDoc.data()?['walletBalance'] ?? 0.0).toDouble();
+      
+      if (senderBalance < amount) throw Exception('Insufficient wallet balance');
+
+      // 1. Deduct from sender
+      tx.update(senderRef, {
+        'walletBalance': senderBalance - amount,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // 2. Add to receiver
+      tx.update(receiverRef, {
+        'walletBalance': receiverBalance + amount,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // 3. Log Debit (Sender)
+      tx.set(debitTxRef, {
+        'userId': senderId,
+        'amount': amount,
+        'type': 'debit',
+        'status': 'success',
+        'title': 'Sent to $receiverName',
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      // 4. Log Credit (Receiver)
+      tx.set(creditTxRef, {
+        'userId': receiverId,
+        'amount': amount,
+        'type': 'credit',
+        'status': 'success',
+        'title': 'Received from ${senderDoc.data()?['name'] ?? 'Friend'}',
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    });
+  }
+
   Future<void> processWalletPayment(String userId, double amount, String orderId) async {
     final userRef = _db.collection('Users').doc(userId);
     final txRef = _db.collection('Transactions').doc();
@@ -76,18 +144,13 @@ class FirestoreService {
       });
 
       // 2. Log transaction
-      final walletTx = WalletTransaction(
-        id: txRef.id,
-        userId: userId,
-        amount: amount,
-        type: TransactionType.debit,
-        status: TransactionStatus.success,
-        timestamp: DateTime.now(),
-        title: 'Order Payment',
-        refId: orderId,
-      );
       tx.set(txRef, {
-        ...walletTx.toMap(),
+        'userId': userId,
+        'amount': amount,
+        'type': 'debit',
+        'status': 'success',
+        'title': 'Order Payment',
+        'refId': orderId,
         'timestamp': FieldValue.serverTimestamp(),
       });
     });
@@ -146,7 +209,7 @@ class FirestoreService {
 
     await _db.collection('Orders').doc(id).set({
       ...order.toMap(),
-      'timestamp': FieldValue.serverTimestamp(),
+      'createdAt': FieldValue.serverTimestamp(),
       'statusTimeline': {'Pending': FieldValue.serverTimestamp()},
     });
     
@@ -189,7 +252,7 @@ class FirestoreService {
   Stream<List<OrderModel>> streamOrdersForUser(String userId) {
     return _db.collection('Orders')
         .where('userId', isEqualTo: userId)
-        .orderBy('timestamp', descending: true)
+        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((s) => s.docs.map((d) => OrderModel.fromMap(d.id, d.data())).toList());
   }

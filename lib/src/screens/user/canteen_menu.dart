@@ -196,9 +196,9 @@ class MenuItemCard extends StatelessWidget {
                     ),
                     Positioned(
                       bottom: -8,
-                      child: isAvailable 
+                      child: (isAvailable && widget.canteen.isOpen) 
                         ? (cartItem == null ? _AddButton(onPressed: () => cart.addItem(item)) : _Stepper(item: cartItem))
-                        : _UnavailableBadge(),
+                        : _UnavailableBadge(label: !widget.canteen.isOpen ? 'CLOSED' : 'UNAVAILABLE'),
                     ),
                   ],
                 ),
@@ -233,8 +233,10 @@ class _AddButton extends StatelessWidget {
 }
 
 class _UnavailableBadge extends StatelessWidget {
+  final String label;
+  const _UnavailableBadge({this.label = 'UNAVAILABLE'});
   @override
-  Widget build(BuildContext context) => Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: Colors.grey[800], borderRadius: BorderRadius.circular(12)), child: const Text('UNAVAILABLE', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 9)));
+  Widget build(BuildContext context) => Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: Colors.grey[800], borderRadius: BorderRadius.circular(12)), child: Text(label, style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold, fontSize: 9)));
 }
 
 class _Stepper extends StatelessWidget {

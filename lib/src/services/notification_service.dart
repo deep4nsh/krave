@@ -7,17 +7,9 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _local = FlutterLocalNotificationsPlugin();
 
   Future<void> init() async {
-    // Request FCM permissions (iOS); Android 13+ needs runtime notifications permission
+    // Request FCM permissions
     await _fcm.requestPermission(alert: true, badge: true, sound: true);
 
-    // On Android 13+, request notifications permission via local notifications plugin
-    final androidSpecific = _local.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-    await androidSpecific?.requestNotificationsPermission();
-
-    // Get token (store later in Firestore via UI layer if needed)
-    await _fcm.getToken();
-
-    // Local notification setup for Android and iOS
     const AndroidInitializationSettings androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
     const DarwinInitializationSettings iosInit = DarwinInitializationSettings();
     const InitializationSettings initSettings = InitializationSettings(android: androidInit, iOS: iosInit);
@@ -25,29 +17,50 @@ class NotificationService {
     await _local.initialize(
       initSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) async {
-        // handle local notification tap
+        // Handle notification tap
       },
     );
 
-    FirebaseMessaging.onMessage.listen((RemoteMessage msg) {
-      _showLocalNotification(msg);
-    });
+    // Create a high-priority channel for Android
+    const AndroidNotificationChannel channel = AndroidNotificationChannel(
+      'krave_handshake',
+      'Krave Live Handshake',
+      description: 'Real-time order updates for Krave students and riders.',
+      importance: Importance.max,
+      playSound: true,
+      enableVibration: true,
+    );
 
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage msg) {
-      // handle tap from system tray
+    await _local
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(channel);
+
+    FirebaseMessaging.onMessage.listen((RemoteMessage msg) {
+      final notification = msg.notification;
+      if (notification != null) {
+        showInstantNotification(notification.title ?? 'Krave', notification.body ?? '');
+      }
     });
   }
 
-  Future<void> _showLocalNotification(RemoteMessage msg) async {
-    final notification = msg.notification;
-    if (notification == null) return;
+  Future<void> showInstantNotification(String title, String body) async {
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'krave_channel',
-      'Krave Notifications',
+      'krave_handshake',
+      'Krave Live Handshake',
       importance: Importance.max,
       priority: Priority.high,
+      showWhen: true,
+      playSound: true,
+      enableVibration: true,
+      styleInformation: BigTextStyleInformation(''),
     );
+    
     const NotificationDetails details = NotificationDetails(android: androidDetails);
-    await _local.show(0, notification.title, notification.body, details);
+    await _local.show(
+      DateTime.now().millisecond, 
+      title, 
+      body, 
+      details,
+    );
   }
 }
