@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/order_model.dart';
 import '../../services/firestore_service.dart';
+import '../../theme/app_colors.dart';
+import '../../widgets/glass_container.dart';
+import '../../widgets/krave_loading.dart';
 
 class OwnerDashboardScreen extends StatelessWidget {
   final String canteenId;
@@ -115,6 +120,7 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard> with SingleTickerP
         child: _StatCard(title: widget.title, value: widget.value, icon: widget.icon),
       ),
     );
+    );
   }
 }
 
@@ -127,43 +133,45 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    theme.colorScheme.primary.withOpacity(0.25),
-                    Colors.transparent,
-                  ],
+    return GlassContainer(
+      padding: const EdgeInsets.all(24.0),
+      borderRadius: BorderRadius.circular(24),
+      opacity: 0.05,
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.primary.withOpacity(0.1),
+            ),
+            child: Icon(icon, size: 32, color: AppColors.primary),
+          ),
+          const SizedBox(width: 20),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: GoogleFonts.outfit(
+                  fontSize: 28, 
+                  fontWeight: FontWeight.black, 
+                  color: Colors.white
                 ),
               ),
-              child: Icon(icon, size: 36, color: theme.colorScheme.primary),
-            ),
-            const SizedBox(width: 20),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  value,
-                  style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold, color: Colors.white),
+              const SizedBox(height: 2),
+              Text(
+                title.toUpperCase(),
+                style: GoogleFonts.outfit(
+                  fontSize: 10, 
+                  fontWeight: FontWeight.w900, 
+                  color: Colors.white38,
+                  letterSpacing: 1.2
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  title,
-                  style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
-                ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -226,41 +234,36 @@ class _TimePickerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
+    return GlassContainer(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.all(24.0),
+      borderRadius: BorderRadius.circular(24),
+      opacity: 0.05,
       child: InkWell(
         onTap: () => _showEditTimingsDialog(context),
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      theme.colorScheme.primary.withOpacity(0.25),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-                child: Icon(Icons.access_time_filled_rounded, size: 36, color: theme.colorScheme.primary),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white10,
               ),
-              const SizedBox(width: 20),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Manage Timings', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Colors.white)),
-                    const SizedBox(height: 4),
-                    Text('Tap to set opening & closing hours', style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70)),
-                  ],
-                ),
+              child: const Icon(Icons.access_time_filled_rounded, size: 32, color: Colors.white38),
+            ),
+            const SizedBox(width: 20),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('STORE TIMINGS', style: GoogleFonts.outfit(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white38, letterSpacing: 1.2)),
+                  const SizedBox(height: 4),
+                  Text('Manage Hours', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                ],
               ),
-              const Icon(Icons.edit, color: Colors.white),
-            ],
-          ),
+            ),
+            const Icon(Icons.edit_note_rounded, color: Colors.white24),
+          ],
         ),
       ),
     );

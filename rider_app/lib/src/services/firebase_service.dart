@@ -169,7 +169,7 @@ class FirebaseService {
         .collection(FirestoreCollections.orders)
         .where('orderType', isEqualTo: 'delivery')
         .where('status', whereIn: OrderStatus.active) // Uses synced 'active' list
-        .orderBy('timestamp', descending: false)
+        .orderBy('createdAt', descending: false)
         .snapshots()
         .map((snap) => snap.docs
             .map((d) => OrderModel.fromMap(d.id, d.data()))
@@ -179,7 +179,7 @@ class FirebaseService {
   Stream<List<OrderModel>> streamAllOrders() {
     return _db
         .collection(FirestoreCollections.orders)
-        .orderBy('timestamp', descending: true)
+        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snap) => snap.docs
             .map((d) => OrderModel.fromMap(d.id, d.data()))

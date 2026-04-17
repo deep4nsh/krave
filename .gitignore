@@ -14,6 +14,10 @@ migrate_working_dir/
 
 # Secrets
 assets/secrets.properties
+functions/serviceAccountKey.json
+**/*serviceAccountKey.json
+.env
+.env.local
 
 # IntelliJ related
 *.iml
