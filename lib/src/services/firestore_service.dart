@@ -56,6 +56,50 @@ class FirestoreService {
     return 'none';
   }
 
+  Future<void> addOwner(String uid, String name, String email, String canteenName) async {
+    await _db.collection('Owners').doc(uid).set({
+      'name': name,
+      'email': email,
+      'canteenName': canteenName,
+      'status': 'pending',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> approveOwner(String ownerId) async {
+    await _db.collection('Owners').doc(ownerId).update({
+      'status': 'approved',
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> rejectOwner(String ownerId, [String? reason]) async {
+    await _db.collection('Owners').doc(ownerId).update({
+      'status': 'rejected',
+      if (reason != null) 'rejectionReason': reason,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Stream<QuerySnapshot> streamPendingOwners() {
+    return _db.collection('Owners')
+        .where('status', isEqualTo: 'pending')
+        .snapshots();
+  }
+
+  Future<void> revokeCanteenApproval(String canteenId, String ownerId) async {
+    await _db.runTransaction((tx) async {
+      tx.update(_db.collection('Canteens').doc(canteenId), {
+        'approved': false,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      tx.update(_db.collection('Owners').doc(ownerId), {
+        'status': 'suspended',
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    });
+  }
+
   // ─── Wallet System ────────────────────────────────────────────────────────
 
   Future<void> transferWalletBalance({
@@ -156,6 +200,17 @@ class FirestoreService {
     });
   }
 
+  Future<void> updateDoc(String path, Map<String, dynamic> data) async {
+    await _db.doc(path).update({
+      ...data,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> deleteMenuItem(String canteenId, String itemId) async {
+    await _db.collection('MenuItems').doc(itemId).delete();
+  }
+
   // ─── Canteen Management ────────────────────────────────────────────────────
 
   Stream<List<Canteen>> streamApprovedCanteens() {
@@ -165,9 +220,24 @@ class FirestoreService {
         .map((snap) => snap.docs.map((d) => Canteen.fromMap(d.id, d.data())).toList());
   }
 
+  Stream<List<MenuItemModel>> streamMenuItems(String canteenId) {
+    return _db.collection('MenuItems')
+        .where('canteenId', isEqualTo: canteenId)
+        .snapshots()
+        .map((s) => s.docs.map((d) => MenuItemModel.fromMap(d.id, d.data())).toList());
+  }
+
   Future<void> updateCanteenStatus(String canteenId, VenueStatus status) async {
     await _db.collection('Canteens').doc(canteenId).update({
       'status': status.name,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> updateCanteenTimings(String canteenId, String opening, String closing) async {
+    await _db.collection('Canteens').doc(canteenId).update({
+      'opening_time': opening,
+      'closing_time': closing,
       'updatedAt': FieldValue.serverTimestamp(),
     });
   }
@@ -195,9 +265,10 @@ class FirestoreService {
       totalAmount: totalAmount,
       tokenNumber: _generateNextToken(user.name),
       status: 'Pending',
-      timestamp: now,
+      createdAt: now,
       paymentId: paymentId,
       orderType: orderType,
+      riderId: riderId,
       deliveryLocation: deliveryLocation,
       fees: fees ?? {'delivery': (orderType == 'delivery' ? 15 : 0), 'platform': 2},
       payment: {'status': 'paid', 'method': paymentId == 'wallet' ? 'wallet' : 'external', 'txId': paymentId},
@@ -255,5 +326,27 @@ class FirestoreService {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((s) => s.docs.map((d) => OrderModel.fromMap(d.id, d.data())).toList());
+  }
+
+  Stream<List<OrderModel>> streamOrdersForCanteen(String canteenId) {
+    return _db.collection('Orders')
+        .where('canteenId', isEqualTo: canteenId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((s) => s.docs.map((d) => OrderModel.fromMap(d.id, d.data())).toList());
+  }
+
+  Stream<OrderModel?> streamOrder(String orderId) {
+    return _db.collection('Orders').doc(orderId).snapshots().map((d) {
+      if (!d.exists) return null;
+      return OrderModel.fromMap(d.id, d.data()!);
+    });
+  }
+
+  Stream<Rider?> streamRider(String riderId) {
+    return _db.collection('Riders').doc(riderId).snapshots().map((d) {
+      if (!d.exists) return null;
+      return Rider.fromMap(d.id, d.data()!);
+    });
   }
 }

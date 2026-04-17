@@ -35,7 +35,7 @@ class OwnerDashboardScreen extends StatelessWidget {
         final today = DateTime.now();
         final startOfToday = DateTime(today.year, today.month, today.day);
         
-        final todaysOrders = orders.where((o) => o.timestamp.isAfter(startOfToday)).toList();
+        final todaysOrders = orders.where((o) => o.createdAt.isAfter(startOfToday)).toList();
         final completedToday = todaysOrders.where((o) => o.status == 'Ready for Pickup' || o.status == 'Completed').length;
         final revenueToday = todaysOrders
             .where((o) => o.status == 'Ready for Pickup' || o.status == 'Completed')
@@ -120,7 +120,6 @@ class _AnimatedStatCardState extends State<_AnimatedStatCard> with SingleTickerP
         child: _StatCard(title: widget.title, value: widget.value, icon: widget.icon),
       ),
     );
-    );
   }
 }
 
@@ -155,7 +154,7 @@ class _StatCard extends StatelessWidget {
                 value,
                 style: GoogleFonts.outfit(
                   fontSize: 28, 
-                  fontWeight: FontWeight.black, 
+                  fontWeight: FontWeight.w900, 
                   color: Colors.white
                 ),
               ),

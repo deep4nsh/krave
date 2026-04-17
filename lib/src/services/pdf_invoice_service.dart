@@ -50,7 +50,7 @@ class PdfInvoiceService {
       children: [
         pw.Text('Order ID: ${order.id}'),
         pw.Text('Token Number: ${order.tokenNumber}'),
-        pw.Text('Order Date: ${DateFormat.yMMMd().add_jm().format(order.timestamp)}'),
+        pw.Text('Order Date: ${DateFormat.yMMMd().add_jm().format(order.createdAt)}'),
       ],
     );
   }

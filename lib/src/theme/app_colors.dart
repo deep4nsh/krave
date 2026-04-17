@@ -22,6 +22,6 @@ class AppColors {
   static const Color textLow = Color(0xFF94A3B8);
 
   // Glassmorphism helpers
-  static Color glassWhite = Colors.white.withValues(alpha: 0.05);
-  static Color glassBorder = Colors.white.withValues(alpha: 0.1);
+  static const Color glassWhite = Color(0x0DFFFFFF);  // White with 0.05 alpha
+  static const Color glassBorder = Color(0x1AFFFFFF); // White with 0.1 alpha
 }

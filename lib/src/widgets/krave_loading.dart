@@ -6,7 +6,7 @@ import '../theme/app_colors.dart';
 class KraveLoading extends StatelessWidget {
   final double size;
   final Color? color;
-  const KraveLoading({super.key, this.size = 50.0, this.color});
+  KraveLoading({super.key, this.size = 50.0, this.color});
 
   @override
   Widget build(BuildContext context) {

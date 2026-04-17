@@ -29,6 +29,9 @@ class Canteen {
   
   final DateTime createdAt;
 
+  bool get isOpen => status == VenueStatus.open;
+  bool get isBusy => status == VenueStatus.busy;
+
   Canteen({
     required this.id,
     required this.name,

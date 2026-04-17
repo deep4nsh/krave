@@ -40,7 +40,7 @@ class OwnerOrders extends StatelessWidget {
               stream: fs.streamOrdersForCanteen(canteenId),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const KraveLoading(size: 50);
+                  return KraveLoading(size: 50);
                 }
                 if (snapshot.hasError) {
                   return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.redAccent)));
@@ -158,7 +158,7 @@ class _VelocityOrderCard extends StatelessWidget {
                   child: Center(
                     child: Text(
                       order.tokenNumber,
-                      style: GoogleFonts.outfit(fontSize: 42, fontWeight: FontWeight.black, color: Colors.white),
+                      style: GoogleFonts.outfit(fontSize: 42, fontWeight: FontWeight.w900, color: Colors.white),
                     ),
                   ),
                 ),

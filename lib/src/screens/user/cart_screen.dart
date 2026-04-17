@@ -10,6 +10,7 @@ import '../../services/cart_provider.dart';
 import '../../services/user_provider.dart';
 import '../../config.dart';
 import '../../theme/app_colors.dart';
+import '../../widgets/krave_loading.dart';
 import 'order_tracking.dart';
 
 class CartScreen extends StatefulWidget {
@@ -129,7 +130,7 @@ class _CartScreenState extends State<CartScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: _isProcessing
-          ? const KraveLoading(size: 80)
+          ? KraveLoading(size: 80)
           : CustomScrollView(
               physics: const BouncingScrollPhysics(),
               slivers: [

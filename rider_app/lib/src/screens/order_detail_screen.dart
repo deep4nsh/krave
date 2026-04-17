@@ -88,7 +88,7 @@ class OrderDetailScreen extends StatelessWidget {
               icon: Icons.access_time_rounded,
               iconColor: AppTheme.textSecondary,
               title: 'Order Time',
-              value: DateFormat('d MMM, h:mm a').format(order.timestamp),
+              value: DateFormat('d MMM, h:mm a').format(order.createdAt),
             ),
             const SizedBox(height: 20),
 

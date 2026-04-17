@@ -47,7 +47,7 @@ class OwnerHistory extends StatelessWidget {
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 subtitle: Text(
-                  'Status: ${order.status}\n${DateFormat.yMMMd().add_jm().format(order.timestamp)}',
+                  'Status: ${order.status}\n${DateFormat.yMMMd().add_jm().format(order.createdAt)}',
                 ),
                 trailing: Text(
                   '₹${order.totalAmount}',

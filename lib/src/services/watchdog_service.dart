@@ -63,8 +63,8 @@ class WatchdogService {
           if (data == null) continue;
           final amount = data['amount'] ?? 0;
           _notifications.showInstantNotification(
-            title: 'You got a Treat! 💸',
-            body: 'Someone just sent you ₹$amount in your Krave wallet.',
+            'You got a Treat! 💸',
+            'Someone just sent you ₹$amount in your Krave wallet.',
           );
         }
       }
@@ -81,9 +81,8 @@ class WatchdogService {
   void _triggerNotification(String token, String status) {
     final body = _getFunkyMessage(status);
     _notifications.showInstantNotification(
-      title: 'Krave Update! 🍔',
-      body: body,
-      payload: 'order_update',
+      'Krave Update! 🍔',
+      body,
     );
   }
 

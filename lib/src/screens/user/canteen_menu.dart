@@ -11,6 +11,7 @@ import '../../services/cart_provider.dart';
 import '../../widgets/gradient_background.dart';
 import '../../widgets/glass_container.dart';
 import '../../widgets/scale_button.dart';
+import '../../widgets/skeleton_canteen_card.dart';
 import '../../theme/app_colors.dart';
 import 'cart_screen.dart';
 
@@ -85,7 +86,7 @@ class _CanteenMenuState extends State<CanteenMenu> {
                 if (snap.connectionState == ConnectionState.waiting) {
                   return SliverList(
                     delegate: SliverChildBuilderDelegate(
-                      (context, index) => const SkeletonMenuItem(),
+                      (context, index) => SkeletonMenuItem(),
                       childCount: 4,
                     ),
                   );
@@ -111,7 +112,7 @@ class _CanteenMenuState extends State<CanteenMenu> {
                               padding: const EdgeInsets.fromLTRB(20, 24, 20, 10),
                               child: Text(category, style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textHigh)),
                             ),
-                            ...categoryItems.map((item) => MenuItemCard(item: item)).toList(),
+                            ...categoryItems.map((item) => MenuItemCard(item: item, canteen: widget.canteen)).toList(),
                           ],
                         );
                       },
@@ -132,7 +133,8 @@ class _CanteenMenuState extends State<CanteenMenu> {
 
 class MenuItemCard extends StatelessWidget {
   final MenuItemModel item;
-  const MenuItemCard({super.key, required this.item});
+  final Canteen canteen;
+  const MenuItemCard({super.key, required this.item, required this.canteen});
 
   @override
   Widget build(BuildContext context) {
@@ -196,9 +198,9 @@ class MenuItemCard extends StatelessWidget {
                     ),
                     Positioned(
                       bottom: -8,
-                      child: (isAvailable && widget.canteen.isOpen) 
+                      child: (isAvailable && canteen.isOpen) 
                         ? (cartItem == null ? _AddButton(onPressed: () => cart.addItem(item)) : _Stepper(item: cartItem))
-                        : _UnavailableBadge(label: !widget.canteen.isOpen ? 'CLOSED' : 'UNAVAILABLE'),
+                        : _UnavailableBadge(label: !canteen.isOpen ? 'CLOSED' : 'UNAVAILABLE'),
                     ),
                   ],
                 ),

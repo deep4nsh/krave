@@ -19,7 +19,7 @@ class OrderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statusColor = _statusColor(order.status);
-    final timeStr = DateFormat('h:mm a').format(order.timestamp);
+    final timeStr = DateFormat('h:mm a').format(order.createdAt);
 
     return GestureDetector(
       onTap: onTap,

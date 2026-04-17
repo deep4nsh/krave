@@ -29,13 +29,13 @@ class OrderTrackingScreen extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: StreamBuilder<OrderModel>(
+      body: StreamBuilder<OrderModel?>(
         stream: fs.streamOrder(orderId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const KraveLoading(size: 60);
+            return KraveLoading(size: 60);
           }
-          if (snapshot.hasError || !snapshot.hasData) {
+          if (snapshot.hasError || !snapshot.hasData || snapshot.data == null) {
             return const Center(child: Text('Could not load order details.', style: TextStyle(color: AppColors.textLow)));
           }
 
@@ -101,7 +101,7 @@ class _OrderSuccessHeader extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     order.tokenNumber,
-                    style: GoogleFonts.outfit(fontSize: 42, fontWeight: FontWeight.black, color: AppColors.primary),
+                    style: GoogleFonts.outfit(fontSize: 42, fontWeight: FontWeight.w900, color: AppColors.primary),
                   ),
                 ],
               ),

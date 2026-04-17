@@ -160,7 +160,7 @@ class _OrderHistoryCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        DateFormat('MMM dd, yyyy • hh:mm a').format(order.timestamp),
+                        DateFormat('MMM dd, yyyy • hh:mm a').format(order.createdAt),
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurface.withOpacity(0.5),
                         ),
