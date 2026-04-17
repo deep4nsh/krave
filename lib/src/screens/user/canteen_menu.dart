@@ -83,7 +83,12 @@ class _CanteenMenuState extends State<CanteenMenu> {
               stream: fs.streamMenuItems(widget.canteen.id),
               builder: (context, snap) {
                 if (snap.connectionState == ConnectionState.waiting) {
-                  return const SliverFillRemaining(child: Center(child: CircularProgressIndicator(color: AppColors.primary)));
+                  return SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) => const SkeletonMenuItem(),
+                      childCount: 4,
+                    ),
+                  );
                 }
                 final items = snap.data ?? [];
                 if (items.isEmpty) {

@@ -10,10 +10,12 @@ import 'src/services/image_search_service.dart';
 import 'src/services/notification_service.dart';
 import 'src/services/cart_provider.dart';
 import 'src/screens/auth/login_screen.dart';
+import 'src/screens/auth/phone_verification_screen.dart';
 import 'src/screens/user/user_home.dart';
 import 'src/screens/owner/owner_home.dart';
 import 'src/screens/owner/waiting_approval_screen.dart';
 import 'src/screens/admin/admin_home.dart';
+import 'src/services/user_provider.dart';
 import 'src/theme/app_theme.dart';
 
 void main() async {
@@ -91,10 +93,25 @@ class Root extends StatelessWidget {
                   return FutureBuilder(
                     future: context.read<FirestoreService>().getUser(snapshot.data!.uid),
                     builder: (context, userSnap) {
-                      if (userSnap.hasData) {
-                        context.read<UserProvider>().setUser(userSnap.data);
+                      if (userSnap.connectionState == ConnectionState.waiting) {
+                        return const Scaffold(body: Center(child: CircularProgressIndicator()));
                       }
-                      return const UserHome();
+                      
+                      if (userSnap.hasData && userSnap.data != null) {
+                        final kraveUser = userSnap.data!;
+                        context.read<UserProvider>().setUser(kraveUser);
+                        
+                        // GATE: If phone is missing, redirect to verification
+                        if (kraveUser.phone == null || kraveUser.phone!.isEmpty) {
+                          return const PhoneVerificationScreen();
+                        }
+                        
+                        return const UserHome();
+                      }
+                      
+                      // Case: Auth exists but Firestore doc is missing/propagating
+                      // Show verification screen as a fallback to ensure they complete it
+                      return const PhoneVerificationScreen();
                     },
                   );
                 default:

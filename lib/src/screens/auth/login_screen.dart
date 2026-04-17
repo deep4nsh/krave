@@ -8,6 +8,7 @@ import '../auth/user_signup.dart';
 import '../user/user_home.dart';
 import '../owner/owner_home.dart';
 import '../owner/waiting_approval_screen.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../widgets/krave_button.dart';
 import '../../widgets/krave_textfield.dart';
 import '../../widgets/glass_container.dart';
@@ -91,6 +92,23 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     }
   }
 
+  Future<void> _loginWithGoogle() async {
+    setState(() => _loading = true);
+    final auth = context.read<AuthService>();
+    try {
+      await auth.signInWithGoogle();
+      // Navigation is handled by Root widget automatically
+    } on Exception catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().split('] ').last)));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -164,6 +182,25 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       isLoading: _loading,
                       onPressed: _login,
                       icon: Icons.login_rounded,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Google Sign In
+                    ScaleButton(
+                      onPressed: _loginWithGoogle,
+                      child: GlassContainer(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        borderRadius: BorderRadius.circular(16),
+                        opacity: 0.05,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const FaIcon(FontAwesomeIcons.google, color: Colors.white, size: 18),
+                            const SizedBox(width: 12),
+                            Text('Continue with Google', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.white)),
+                          ],
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 20),
 

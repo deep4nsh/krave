@@ -67,7 +67,7 @@ class _CartScreenState extends State<CartScreen> {
 
       if (mounted) {
         navigator.popUntil((route) => route.isFirst);
-        navigator.pushReplacement(MaterialPageRoute(builder: (_) => OrderTrackingScreen(orderId: orderId)));
+        navigator.push(MaterialPageRoute(builder: (_) => OrderTrackingScreen(orderId: orderId)));
       }
     } catch (e) {
       setState(() => _isProcessing = false);
@@ -129,7 +129,7 @@ class _CartScreenState extends State<CartScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: _isProcessing
-          ? Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? const KraveLoading(size: 80)
           : CustomScrollView(
               physics: const BouncingScrollPhysics(),
               slivers: [

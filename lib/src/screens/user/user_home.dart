@@ -208,11 +208,11 @@ class _UserHomeState extends State<UserHome> {
                 builder: (context, snap) {
                   if (snap.connectionState == ConnectionState.waiting || _isLoadingLocation) {
                     return SliverPadding(
-                      padding: const EdgeInsets.all(16.0),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
                       sliver: SliverList(
                         delegate: SliverChildBuilderDelegate(
                           (context, index) => const SkeletonCanteenCard(),
-                          childCount: 5,
+                          childCount: 3,
                         ),
                       ),
                     );

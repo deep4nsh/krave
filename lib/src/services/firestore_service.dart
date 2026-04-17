@@ -15,6 +15,17 @@ class FirestoreService {
 
   // ─── User Management ───────────────────────────────────────────────────────
 
+  Future<void> updateUserFCMToken(String uid, String? token) async {
+    await _db.collection('Users').doc(uid).update({'fcmToken': token});
+  }
+
+  Future<void> updateUserPhone(String uid, String phone) async {
+    await _db.collection('Users').doc(uid).update({
+      'phone': phone,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
   Future<void> createUser(KraveUser user) async {
     await _db.collection('Users').doc(user.id).set(user.toMap());
   }

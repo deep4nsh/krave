@@ -32,7 +32,7 @@ class OrderTrackingScreen extends StatelessWidget {
         stream: fs.streamOrder(orderId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+            return const KraveLoading(size: 60);
           }
           if (snapshot.hasError || !snapshot.hasData) {
             return const Center(child: Text('Could not load order details.', style: TextStyle(color: AppColors.textLow)));
