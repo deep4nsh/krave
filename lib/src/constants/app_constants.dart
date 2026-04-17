@@ -4,6 +4,7 @@ class OrderStatus {
   static const String pending = 'Pending';
   static const String preparing = 'Preparing';
   static const String readyForPickup = 'Ready for Pickup';
+  static const String outForDelivery = 'Out for Delivery';
   static const String completed = 'Completed';
   static const String cancelled = 'Cancelled';
 
@@ -11,6 +12,7 @@ class OrderStatus {
     pending,
     preparing,
     readyForPickup,
+    outForDelivery,
     completed,
     cancelled,
   ];
@@ -19,6 +21,7 @@ class OrderStatus {
     pending,
     preparing,
     readyForPickup,
+    outForDelivery,
   ];
 }
 

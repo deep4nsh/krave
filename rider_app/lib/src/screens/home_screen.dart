@@ -26,6 +26,27 @@ class _HomeScreenState extends State<HomeScreen> {
     final orders = context.read<OrderProvider>();
     orders.listenActiveOrders();
     orders.listenAllOrders();
+    _startLocationSimulation();
+  }
+
+  void _startLocationSimulation() async {
+    // In a real app, this would use Geolocator.getPositionStream()
+    // For this build, we simulate movement to update the new currentLocation field
+    while (mounted) {
+      final auth = context.read<AuthProvider>();
+      if (auth.rider != null && auth.rider!.isActive) {
+        // Simulate minor movement
+        final lat = 28.7041 + (0.001 * (0.5 - (DateTime.now().second % 10) / 10));
+        final lng = 77.1025 + (0.001 * (0.5 - (DateTime.now().second % 10) / 10));
+        
+        await context.read<FirebaseService>().updateRiderLocation(
+          auth.rider!.id, 
+          lat, 
+          lng
+        );
+      }
+      await Future.delayed(const Duration(seconds: 30));
+    }
   }
 
   @override

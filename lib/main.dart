@@ -40,6 +40,7 @@ class KraveApp extends StatelessWidget {
         Provider<AuthService>(create: (_) => AuthService()),
         Provider<FirestoreService>(create: (_) => FirestoreService()),
         ChangeNotifierProvider<CartProvider>(create: (_) => CartProvider()),
+        ChangeNotifierProvider<UserProvider>(create: (_) => UserProvider()),
         Provider<ImageSearchService>(create: (_) => ImageSearchService()),
       ],
       child: MaterialApp(
@@ -87,7 +88,15 @@ class Root extends StatelessWidget {
                 case 'pendingOwner':
                   return const WaitingApprovalScreen();
                 case 'user':
-                  return const UserHome();
+                  return FutureBuilder(
+                    future: context.read<FirestoreService>().getUser(snapshot.data!.uid),
+                    builder: (context, userSnap) {
+                      if (userSnap.hasData) {
+                        context.read<UserProvider>().setUser(userSnap.data);
+                      }
+                      return const UserHome();
+                    },
+                  );
                 default:
                   return const LoginScreen();
               }

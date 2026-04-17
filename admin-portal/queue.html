@@ -72,8 +72,8 @@
 
     // Stream Orders
     const q = query(
-      collection(db, "orders"), 
-      where("status", "in", ["Preparing", "Ready for Pickup"]),
+      collection(db, "Orders"), 
+      where("status", "in", ["Preparing", "Ready for Pickup", "Out for Delivery"]),
       orderBy("timestamp", "asc")
     );
 

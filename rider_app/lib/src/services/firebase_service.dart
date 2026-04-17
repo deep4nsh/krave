@@ -43,10 +43,6 @@ class FirebaseService {
     return await _signInWithCredential(credential);
   }
 
-  Future<RiderModel> signInWithCredential(PhoneAuthCredential credential) async {
-    return await _signInWithCredential(credential);
-  }
-
   Future<RiderModel> _signInWithCredential(AuthCredential credential) async {
     try {
       final cred = await _auth.signInWithCredential(credential);
@@ -57,7 +53,6 @@ class FirebaseService {
       if (doc.exists) {
         return RiderModel.fromMap(uid, doc.data()!);
       } else {
-        // Create skeleton for new onboarding rider
         final newRider = RiderModel(
           id: uid,
           name: '',
@@ -77,7 +72,7 @@ class FirebaseService {
 
   Future<void> signOut() => _auth.signOut();
 
-  // ─── Rider ──────────────────────────────────────────────────────────────────
+  // ─── Rider Core ────────────────────────────────────────────────────────────
 
   Future<RiderModel?> getRider(String uid) async {
     try {
@@ -89,6 +84,20 @@ class FirebaseService {
     }
   }
 
+  Future<void> updateRiderLocation(String uid, double lat, double lng) async {
+    try {
+      await _db.collection(FirestoreCollections.riders).doc(uid).update({
+        'currentLocation': {
+          'latitude': lat,
+          'longitude': lng,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }
+      });
+    } catch (e) {
+      // Background task, log and fail silently
+    }
+  }
+
   Future<void> updateBasicProfile(String uid, String name, String city, String vehicleType, String email) async {
     try {
       await _db.collection(FirestoreCollections.riders).doc(uid).update({
@@ -97,6 +106,7 @@ class FirebaseService {
         'vehicleType': vehicleType,
         'email': email,
         'onboardingStep': 2,
+        'updatedAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
       rethrow;
@@ -116,17 +126,12 @@ class FirebaseService {
 
   Future<void> updateActiveStatus(String uid, bool isActive) async {
     try {
-      await _db.collection(FirestoreCollections.riders).doc(uid).update({'isActive': isActive});
+      await _db.collection(FirestoreCollections.riders).doc(uid).update({
+        'isActive': isActive,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
     } catch (e) {
       rethrow;
-    }
-  }
-
-  Future<void> updateFCMToken(String uid, String token) async {
-    try {
-      await _db.collection(FirestoreCollections.riders).doc(uid).update({'fcmToken': token});
-    } catch (e) {
-      // Non-critical, just log
     }
   }
 
@@ -144,12 +149,11 @@ class FirebaseService {
     final snapshot = await uploadTask;
     final downloadUrl = await snapshot.ref.getDownloadURL();
 
-    // Update the rider document's kycDetails map
     await _db.collection(FirestoreCollections.riders).doc(uid).set({
       'kycDetails': {
         docType: {
           'url': downloadUrl,
-          'status': 'Uploaded', // Becomes 'Pending' when submitted for verif
+          'status': 'Uploaded',
           'uploadedAt': FieldValue.serverTimestamp(),
         }
       }
@@ -158,23 +162,13 @@ class FirebaseService {
     return downloadUrl;
   }
 
-  Future<void> submitKycForVerification(String uid) async {
-    try {
-      await _db.collection(FirestoreCollections.riders).doc(uid).update({
-        'onboardingStep': 3,
-      });
-    } catch (e) {
-      rethrow;
-    }
-  }
-
   // ─── Orders ─────────────────────────────────────────────────────────────────
 
   Stream<List<OrderModel>> streamActiveOrders() {
     return _db
         .collection(FirestoreCollections.orders)
         .where('orderType', isEqualTo: 'delivery')
-        .where('status', whereIn: OrderStatus.active)
+        .where('status', whereIn: OrderStatus.active) // Uses synced 'active' list
         .orderBy('timestamp', descending: false)
         .snapshots()
         .map((snap) => snap.docs
@@ -182,7 +176,6 @@ class FirebaseService {
             .toList());
   }
 
-  /// All orders for history (most recent first)
   Stream<List<OrderModel>> streamAllOrders() {
     return _db
         .collection(FirestoreCollections.orders)
@@ -193,26 +186,25 @@ class FirebaseService {
             .toList());
   }
 
-  /// Fetch canteen name by ID
-  Future<String> getCanteenName(String canteenId) async {
-    try {
-      final doc = await _db.collection(FirestoreCollections.canteens).doc(canteenId).get();
-      return doc.data()?['name'] as String? ?? 'Canteen';
-    } catch (_) {
-      return 'Canteen';
-    }
-  }
-
-  /// Update order status
   Future<void> updateOrderStatus(String orderId, String status, String riderId) async {
     try {
       await _db.collection(FirestoreCollections.orders).doc(orderId).update({
         'status': status,
         'riderId': riderId,
         'updatedAt': FieldValue.serverTimestamp(),
+        'statusTimeline.$status': FieldValue.serverTimestamp(), // Update professional timeline
       });
     } catch (e) {
       rethrow;
+    }
+  }
+
+  Future<String> getCanteenName(String canteenId) async {
+    try {
+      final doc = await _db.collection(FirestoreCollections.canteens).doc(canteenId).get();
+      return doc.data()?['name'] as String? ?? 'Canteen';
+    } catch (_) {
+      return 'Canteen';
     }
   }
 }
