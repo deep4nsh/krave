@@ -52,7 +52,7 @@ export async function loadOrders() {
   const ridersSnap = await getDocs(collection(db, COLLECTIONS.RIDERS));
   ridersSnap.forEach(doc => { ridersCache[doc.id] = doc.data().name || 'Unknown Rider'; });
 
-  const q = query(collection(db, COLLECTIONS.ORDERS), orderBy('timestamp', 'desc'));
+  const q = query(collection(db, COLLECTIONS.ORDERS), orderBy('createdAt', 'desc'));
   const unsub = onSnapshot(q, snap => {
     allOrders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     updateCount(allOrders.length);
@@ -76,7 +76,7 @@ export async function loadOrders() {
   document.getElementById('export-btn').addEventListener('click', () => {
     exportToCSV('krave_orders.csv',
       ['Token', 'Amount', 'Status', 'Canteen ID', 'Payment ID', 'Timestamp'],
-      allOrders.map(o => [o.tokenNumber, o.totalAmount, o.status, o.canteenId, o.paymentId, o.timestamp?.toDate?.()?.toISOString() || ''])
+      allOrders.map(o => [o.tokenNumber, o.totalAmount, o.status, o.canteenId, o.paymentId, o.createdAt?.toDate?.()?.toISOString() || ''])
     );
   });
 
@@ -115,7 +115,7 @@ function renderOrders(orders, ridersCache = {}) {
         </div>
       </td>
       <td style="color:var(--text-muted);font-family:monospace;font-size:11px">${o.paymentId ? o.paymentId.substring(0,18)+'…' : '—'}</td>
-      <td style="color:var(--text-muted);font-size:12px">${formatDate(o.timestamp)}</td>
+      <td style="color:var(--text-muted);font-size:12px">${formatDate(o.createdAt)}</td>
       <td>
         <select class="order-status-select" onchange="updateOrderStatus('${o.id}', this.value)">
           ${ORDER_STATUS_LIST.map(s => `<option value="${s}" ${o.status===s?'selected':''}>${s}</option>`).join('')}

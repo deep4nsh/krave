@@ -1,5 +1,5 @@
 // ─── App Entry Point ──────────────────────────────────────────────────────────
-import { initAuth, logout, currentUser } from './auth.js';
+import { initAuth, logout, currentUser, userRole } from './auth.js';
 import { initRouter, registerRoute, navigate } from './router.js';
 import { showToast, hideConfirmModal } from './utils.js';
 import { loadDashboard } from './pages/dashboard.js';
@@ -9,8 +9,7 @@ import { loadUsers } from './pages/users.js';
 import { loadOrders } from './pages/orders.js';
 import { loadAnalytics } from './pages/analytics.js';
 import { loadRiders } from './pages/riders.js';
-
-// ─── Login Handler ─────────────────────────────────────────────────────────────
+import { loadMenuManagement } from './pages/menu_management.js';
 import { login } from './auth.js';
 
 const loginForm = document.getElementById('login-form');
@@ -28,85 +27,63 @@ if (loginForm) {
 
     try {
       await login(email, password);
-      // Auth state change will handle the transition
     } catch (err) {
-      errorEl.textContent = err.message || 'Login failed. Please try again.';
+      errorEl.textContent = err.message || 'Login failed.';
       errorEl.classList.add('show');
       btn.disabled = false;
-      btn.innerHTML = 'Sign In as Admin';
+      btn.innerHTML = 'Sign In';
     }
   });
 }
 
-// ─── Confirm Modal Close ───────────────────────────────────────────────────────
 document.getElementById('confirm-modal-cancel').addEventListener('click', hideConfirmModal);
-document.getElementById('confirm-modal').addEventListener('click', (e) => {
-  if (e.target === e.currentTarget) hideConfirmModal();
-});
+document.getElementById('logout-btn').addEventListener('click', async () => { await logout(); });
 
-// ─── Logout ───────────────────────────────────────────────────────────────────
-document.getElementById('logout-btn').addEventListener('click', async () => {
-  await logout();
-});
-
-// ─── Auth State ───────────────────────────────────────────────────────────────
 function showApp(user) {
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
 
-  // Set user info in sidebar
-  const email = user.email || '';
-  const initials = email.charAt(0).toUpperCase();
-  document.getElementById('user-avatar-text').textContent = initials;
-  document.getElementById('user-name-text').textContent = email.split('@')[0];
-  document.getElementById('user-role-text').textContent = 'Admin';
+  // UI Masking based on Role
+  const sidebar = document.getElementById('sidebar');
+  if (userRole === 'owner') {
+     // Hide SuperAdmin-only tabs
+     sidebar.querySelectorAll('[data-superadmin="true"]').forEach(el => el.style.display = 'none');
+     document.getElementById('owner-section').style.display = 'block';
+  } else {
+     sidebar.querySelectorAll('[data-superadmin="true"]').forEach(el => el.style.display = 'flex');
+     document.getElementById('owner-section').style.display = 'none';
+  }
 
-  // Set clock
+  const email = user.email || '';
+  document.getElementById('user-avatar-text').textContent = email.charAt(0).toUpperCase();
+  document.getElementById('user-name-text').textContent = email.split('@')[0];
+  document.getElementById('user-role-text').textContent = userRole.toUpperCase();
+
   updateClock();
   setInterval(updateClock, 1000);
 
-  // Register routes
+  // Routes
   registerRoute('dashboard', loadDashboard);
+  registerRoute('analytics', loadAnalytics);
   registerRoute('approvals', loadApprovals);
   registerRoute('canteens', loadCanteens);
   registerRoute('users', loadUsers);
-  registerRoute('orders', loadOrders);
-  registerRoute('analytics', loadAnalytics);
   registerRoute('riders', loadRiders);
+  registerRoute('orders', loadOrders);
+  registerRoute('menu', () => loadMenuManagement(currentUser.canteenId));
 
-  // Init router
   initRouter();
-
-  showToast('Welcome back! 👋', 'success');
+  showToast(`Logged in as ${userRole}! 👋`, 'success');
 }
 
 function showLogin() {
   document.getElementById('auth-screen').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
-  const btn = document.getElementById('login-btn');
-  if (btn) { btn.disabled = false; btn.innerHTML = 'Sign In as Admin'; }
 }
 
 function updateClock() {
   const el = document.getElementById('topbar-clock');
-  if (el) {
-    el.textContent = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
-  }
+  if (el) el.textContent = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 }
 
-// Boot
 initAuth(showApp, showLogin);
-
-// Update pending badge in sidebar periodically
-import { db } from './firebase-config.js';
-import { collection, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { COLLECTIONS } from './constants.js';
-
-const pendingQ = query(collection(db, COLLECTIONS.OWNERS), where('status', '==', 'pending'));
-onSnapshot(pendingQ, snap => {
-  const badge = document.getElementById('nav-badge-approvals');
-  if (badge) {
-    badge.textContent = snap.size;
-    badge.style.display = snap.size > 0 ? 'flex' : 'none';
-  }
-});
