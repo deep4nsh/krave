@@ -40,90 +40,38 @@ class OrderTrackingScreen extends StatelessWidget {
           }
 
           final order = snapshot.data!;
-          return _OrderWatchdog(order: order);
+          return CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                sliver: SliverToBoxAdapter(
+                  child: _OrderSuccessHeader(order: order).animate().fadeIn().scale(curve: Curves.easeOutBack),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                sliver: SliverToBoxAdapter(
+                  child: _StatusTimeline(currentStatus: order.status, orderType: order.orderType),
+                ),
+              ),
+              if (order.riderId != null)
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 32, 20, 0),
+                  sliver: SliverToBoxAdapter(
+                    child: _RiderCard(riderId: order.riderId!, fs: fs),
+                  ),
+                ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
+                sliver: SliverToBoxAdapter(
+                  child: _OrderSummaryCard(order: order),
+                ),
+              ),
+            ],
+          );
         },
       ),
-    );
-  }
-}
-
-class _OrderWatchdog extends StatefulWidget {
-  final OrderModel order;
-  const _OrderWatchdog({required this.order});
-
-  @override
-  State<_OrderWatchdog> createState() => _OrderWatchdogState();
-}
-
-class _OrderWatchdogState extends State<_OrderWatchdog> {
-  late String _lastStatus;
-
-  @override
-  void initState() {
-    super.initState();
-    _lastStatus = widget.order.status;
-  }
-
-  void _checkForStatusChange() {
-    if (widget.order.status != _lastStatus) {
-      final oldStatus = _lastStatus;
-      _lastStatus = widget.order.status;
-      
-      // Trigger Funky Notification
-      final ns = NotificationService();
-      final msg = _getFunkyMessage(widget.order.status);
-      ns.showInstantNotification('Order Update!', msg);
-    }
-  }
-
-  String _getFunkyMessage(String status) {
-    switch (status) {
-      case 'Preparing': return 'Chef is speed-running your order! 👨‍🍳';
-      case 'Ready for Pickup': return 'Tokens Up! Your meal is waiting at the counter! 🍔';
-      case 'Out for Delivery': return 'The Rider is zooming to your spot! 🛵';
-      case 'Completed': return 'Order complete. Hope you enjoyed the treat! 🙌';
-      case 'Cancelled': return 'Order cancelled. Refund initiated to your wallet. 💸';
-      default: return 'Your order status is now: $status';
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Run the check on every build to see if the fresh 'order' from StreamBuilder has a new status
-    _checkForStatusChange();
-
-    final order = widget.order;
-    final fs = context.read<FirestoreService>();
-
-    return CustomScrollView(
-      physics: const BouncingScrollPhysics(),
-      slivers: [
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-          sliver: SliverToBoxAdapter(
-            child: _OrderSuccessHeader(order: order).animate().fadeIn().scale(curve: Curves.easeOutBack),
-          ),
-        ),
-        SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          sliver: SliverToBoxAdapter(
-            child: _StatusTimeline(currentStatus: order.status, orderType: order.orderType),
-          ),
-        ),
-        if (order.riderId != null)
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 32, 20, 0),
-            sliver: SliverToBoxAdapter(
-              child: _RiderCard(riderId: order.riderId!, fs: fs),
-            ),
-          ),
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
-          sliver: SliverToBoxAdapter(
-            child: _OrderSummaryCard(order: order),
-          ),
-        ),
-      ],
     );
   }
 }

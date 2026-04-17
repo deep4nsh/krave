@@ -1,57 +1,45 @@
 const functions = require("firebase-functions/v1");
 const admin = require("firebase-admin");
-const Razorpay = require("razorpay");
-const crypto = require("crypto");
 
 admin.initializeApp();
 
-// Initialize Razorpay instance safely using environment configuration
-const razorpay = new Razorpay({
-  key_id: functions.config().razorpay.key_id,
-  key_secret: functions.config().razorpay.key_secret,
-});
-
-// --- Cloud Functions for User Management ---
-
-exports.onOwnerDelete = functions.firestore
-  .document("Owners/{ownerId}")
-  .onDelete(async (snap, context) => {
-    const ownerId = context.params.ownerId;
-    console.log(`--- Deleting auth user for ownerId: ${ownerId} ---`);
-    try {
-      await admin.auth().deleteUser(ownerId);
-      console.log(`Successfully deleted auth user: ${ownerId}`);
-    } catch (error) {
-      console.error(`Error deleting auth user ${ownerId}:`, error);
-    }
-  });
-
-
-// --- Cloud Functions for Notifications ---
+// --- Cloud Functions for Notifications (THE MASTER HANDSHAKE) ---
 
 // 1. Notify owner when a new order is placed
 exports.onOrderCreated = functions.firestore
   .document("Orders/{orderId}")
   .onCreate(async (snap, context) => {
     const order = snap.data();
-    const ownerId = order.canteenId; // Assuming canteenId is the owner's UID
+    const canteenId = order.canteenId;
 
-    const ownerDoc = await admin.firestore().collection("Owners").doc(ownerId).get();
-    const fcmToken = ownerDoc.data().fcmToken;
+    // We need to find the owner associated with this canteen
+    const ownersSnap = await admin.firestore().collection("Owners")
+      .where("canteen_id", "==", canteenId)
+      .limit(1)
+      .get();
 
-    if (fcmToken) {
-      const payload = {
-        notification: {
-          title: "New Order Received!",
-          body: `Order #${order.tokenNumber} has been placed.`,
-          sound: "default",
-        },
-      };
-      await admin.messaging().sendToDevice(fcmToken, payload);
+    if (!ownersSnap.empty) {
+      const ownerData = ownersSnap.docs[0].data();
+      const fcmToken = ownerData.fcmToken;
+
+      if (fcmToken) {
+        const payload = {
+          notification: {
+            title: "New Order! 🔔",
+            body: `Order #${order.tokenNumber} just came in! Get the kitchen ready.`,
+            sound: "default",
+          },
+          data: {
+            clickAction: "FLUTTER_NOTIFICATION_CLICK",
+            orderId: context.params.orderId,
+          }
+        };
+        await admin.messaging().sendToDevice(fcmToken, payload);
+      }
     }
   });
 
-// 2. Notify user when order status changes
+// 2. Notify student when order status changes (SMART HANDSHAKE)
 exports.onOrderStatusUpdate = functions.firestore
   .document("Orders/{orderId}")
   .onUpdate(async (change, context) => {
@@ -61,54 +49,60 @@ exports.onOrderStatusUpdate = functions.firestore
     if (newValue.status !== previousValue.status) {
       const userId = newValue.userId;
       const userDoc = await admin.firestore().collection("Users").doc(userId).get();
+      
+      if (!userDoc.exists) return;
       const fcmToken = userDoc.data().fcmToken;
 
       if (fcmToken) {
+        const statusMsg = getFunkyMessage(newValue.status);
+        
         const payload = {
           notification: {
-            title: "Order Status Updated",
-            body: `Your order #${newValue.tokenNumber} is now ${newValue.status}.`,
+            title: "Krave Update! 🍔",
+            body: statusMsg,
             sound: "default",
           },
+          data: {
+            clickAction: "FLUTTER_NOTIFICATION_CLICK",
+            orderId: context.params.orderId,
+            status: newValue.status,
+          }
         };
         await admin.messaging().sendToDevice(fcmToken, payload);
       }
     }
   });
 
-// 3. Notify admins of new owner approval requests
-exports.onOwnerCreated = functions.firestore
-  .document("Owners/{ownerId}")
-  .onCreate(async (snap, context) => {
-    const adminsSnapshot = await admin.firestore().collection("Admins").get();
-    const tokens = adminsSnapshot.docs.map(doc => doc.data().fcmToken).filter(token => token);
+function getFunkyMessage(status) {
+  switch (status) {
+    case 'Preparing': return 'Chef is speed-running your order! 👨‍🍳';
+    case 'Ready for Pickup': return 'Tokens Up! Your meal is waiting at the counter! 🍔';
+    case 'Out for Delivery': return 'The Rider is zooming to your spot! 🛵';
+    case 'Completed': return 'Order complete. Hope you enjoyed the treat! 🙌';
+    case 'Cancelled': return 'Order cancelled. Refund initiated to your wallet. 💸';
+    default: return `Your order status is now: ${status}`;
+  }
+}
 
-    if (tokens.length > 0) {
-      const payload = {
-        notification: {
-          title: "New Owner Request",
-          body: "A new canteen owner is awaiting approval.",
-          sound: "default",
-        },
-      };
-      await admin.messaging().sendToDevice(tokens, payload);
+// 3. Notify User on Wallet Transfer (SOCIAL HANDSHAKE)
+exports.onTransactionCreated = functions.firestore
+  .document("Transactions/{txId}")
+  .onCreate(async (snap, context) => {
+    const tx = snap.data();
+    if (tx.type === 'credit') {
+      const userDoc = await admin.firestore().collection("Users").doc(tx.userId).get();
+      if (!userDoc.exists) return;
+      const fcmToken = userDoc.data().fcmToken;
+
+      if (fcmToken) {
+        const payload = {
+          notification: {
+            title: "You got a Treat! 💸",
+            body: `Someone just sent you ₹${tx.amount} in your Krave wallet!`,
+            sound: "default",
+          }
+        };
+        await admin.messaging().sendToDevice(fcmToken, payload);
+      }
     }
   });
-
-
-// --- Cloud Functions for Payments ---
-
-exports.createRazorpayOrder = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError("unauthenticated", "Authentication required.");
-  }
-  // ... (rest of the function)
-});
-
-exports.confirmRazorpayPayment = functions.https.onCall(async (data, context) => {
-  if (!context.auth) {
-    throw new functions.https.HttpsError("unauthenticated", "Authentication required.");
-  }
-  // ... (rest of the function)
-});
-

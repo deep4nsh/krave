@@ -189,8 +189,38 @@ class _OwnerHomeState extends State<OwnerHome> {
     return Scaffold(
       extendBody: true,
       appBar: AppBar(
-        title: Text(pageTitles[_selectedIndex]),
-        actions: [IconButton(icon: const Icon(Icons.logout, color: Colors.redAccent), onPressed: _logout)],
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text(
+          pageTitles[_selectedIndex], 
+          style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.textHigh)
+        ),
+        actions: [
+          // Live Canteen Toggle
+          StreamBuilder<DocumentSnapshot>(
+            stream: context.read<FirestoreService>()._db.collection('Canteens').doc(_canteenId).snapshots(),
+            builder: (context, snapshot) {
+              final isOpen = (snapshot.data?.data() as Map<String, dynamic>?)?['isOpen'] ?? false;
+              return Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: ChoiceChip(
+                  label: Text(isOpen ? 'OPEN' : 'CLOSED', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isOpen ? Colors.black : Colors.white)),
+                  selected: isOpen,
+                  selectedColor: AppColors.primary,
+                  backgroundColor: Colors.redAccent.withOpacity(0.2),
+                  onSelected: (val) {
+                    HapticFeedback.heavyImpact();
+                    context.read<FirestoreService>().updateDoc('Canteens/$_canteenId', {'isOpen': val});
+                  },
+                ),
+              );
+            }
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout_rounded, color: Colors.white24, size: 20), 
+            onPressed: _logout
+          ),
+        ],
       ),
       body: GradientBackground(
         child: PageView(
@@ -203,12 +233,13 @@ class _OwnerHomeState extends State<OwnerHome> {
         selectedIndex: _selectedIndex,
         onTap: _onNavTapped,
       ),
-      // Step 2: The FAB is now here and shown conditionally
       floatingActionButton: _selectedIndex == 2 
           ? FloatingActionButton.extended(
               onPressed: _addMenuItemDialog,
-              label: const Text('ADD ITEM'),
-              icon: const Icon(Icons.add),
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.black,
+              label: const Text('ADD NEW ITEM', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
+              icon: const Icon(Icons.add_rounded),
             )
           : null,
     );

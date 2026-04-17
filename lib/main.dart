@@ -16,6 +16,7 @@ import 'src/screens/owner/owner_home.dart';
 import 'src/screens/owner/waiting_approval_screen.dart';
 import 'src/screens/admin/admin_home.dart';
 import 'src/services/user_provider.dart';
+import 'src/services/watchdog_service.dart';
 import 'src/theme/app_theme.dart';
 
 void main() async {
@@ -100,6 +101,9 @@ class Root extends StatelessWidget {
                       if (userSnap.hasData && userSnap.data != null) {
                         final kraveUser = userSnap.data!;
                         context.read<UserProvider>().setUser(kraveUser);
+                        
+                        // Start Master Watchdog for the student
+                        WatchdogService().start(kraveUser.id);
                         
                         // GATE: If phone is missing, redirect to verification
                         if (kraveUser.phone == null || kraveUser.phone!.isEmpty) {

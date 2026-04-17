@@ -1,6 +1,7 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/menu_item_model.dart';
 import '../../services/firestore_service.dart';
 
@@ -50,34 +51,71 @@ class _MenuItemTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final fs = context.read<FirestoreService>();
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      child: ListTile(
-        leading: SizedBox(
-          width: 60,
-          height: 60,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(8.0),
-            child: CachedNetworkImage(
-              imageUrl: item.photoUrl ?? '',
-              fit: BoxFit.cover,
-              placeholder: (context, url) => Container(color: Colors.black12),
-              errorWidget: (context, url, error) => Container(
-                color: Colors.black12,
-                child: Icon(Icons.fastfood, color: theme.colorScheme.primary, size: 30),
+    return Opacity(
+      opacity: item.available ? 1.0 : 0.6,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withOpacity(0.1)),
+        ),
+        child: Row(
+          children: [
+            // Item Image
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: CachedNetworkImage(
+                imageUrl: item.photoUrl ?? '',
+                width: 60,
+                height: 60,
+                fit: BoxFit.cover,
+                errorWidget: (context, url, error) => Container(
+                  width: 60, height: 60, color: Colors.white12,
+                  child: const Icon(Icons.fastfood_rounded, color: Colors.white24),
+                ),
               ),
             ),
-          ),
-        ),
-        title: Text(item.name, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: Colors.white)),
-        subtitle: Text('${item.category} - ₹${item.price}', style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70)),
-        trailing: IconButton(
-          tooltip: 'Delete Item',
-          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-          onPressed: () => fs.deleteMenuItem(canteenId, item.id),
+            const SizedBox(width: 16),
+            
+            // Item details
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.name,
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+                  ),
+                  Text(
+                    '₹${item.price} • ${item.category}',
+                    style: const TextStyle(color: Colors.white38, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+
+            // Availability Switch
+            Switch(
+              value: item.available,
+              activeColor: const Color(0xFF10b981),
+              onChanged: (val) {
+                fs.updateDoc(
+                  'Canteens/$canteenId/MenuItems/${item.id}',
+                  {'available': val, 'updatedAt': FieldValue.serverTimestamp()}
+                );
+              },
+            ),
+            
+            // Delete Action
+            IconButton(
+              icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+              onPressed: () => fs.deleteMenuItem(canteenId, item.id),
+            ),
+          ],
         ),
       ),
     );
