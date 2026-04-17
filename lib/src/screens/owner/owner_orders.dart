@@ -92,120 +92,118 @@ class _OrderQueueList extends StatelessWidget {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
       itemCount: orders.length,
-      itemBuilder: (context, index) => _KitchenOrderCard(order: orders[index]).animate().fadeIn(delay: (50 * index).ms).slideY(begin: 0.1),
+      itemBuilder: (context, index) {
+        final order = orders[index];
+        return _VelocityOrderCard(order: order);
+      },
     );
   }
 }
 
-class _KitchenOrderCard extends StatelessWidget {
+class _VelocityOrderCard extends StatelessWidget {
   final OrderModel order;
-  const _KitchenOrderCard({required this.order});
+  const _VelocityOrderCard({required this.order});
 
   @override
   Widget build(BuildContext context) {
     final fs = context.read<FirestoreService>();
     
-    // Determine next step
+    // Efficiency Mapping
     String nextStatus = 'Preparing';
-    String actionLabel = 'START COOKING';
-    Color actionColor = AppColors.primary;
+    Color stateColor = Colors.redAccent;
+    IconData actionIcon = Icons.restaurant_rounded;
 
     if (order.status == 'Preparing') {
-      nextStatus = (order.orderType == 'dineIn') ? 'Ready for Pickup' : 'Ready for Pickup'; // Logic currently assumes all stay ready until handoff
-      actionLabel = 'MARK AS READY';
-      actionColor = Colors.blueAccent;
-    } else if (['Ready for Pickup', 'Out for Delivery'].contains(order.status)) {
+      nextStatus = 'Ready for Pickup';
+      stateColor = Colors.blueAccent;
+      actionIcon = Icons.check_circle_outline_rounded;
+    } else if (order.status == 'Ready for Pickup' || order.status == 'Out for Delivery') {
       nextStatus = 'Completed';
-      actionLabel = 'CONFIRM HAND-OFF';
-      actionColor = Colors.indigoAccent;
+      stateColor = const Color(0xFF10b981); // Emerald
+      actionIcon = Icons.handshake_rounded;
     }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: GlassContainer(
-        padding: const EdgeInsets.all(20),
-        borderRadius: BorderRadius.circular(24),
-        opacity: 0.05,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Dismissible(
+      key: Key(order.id),
+      direction: DismissDirection.startToEnd,
+      background: Container(
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.only(left: 32),
+        decoration: BoxDecoration(color: stateColor, borderRadius: BorderRadius.circular(24)),
+        child: const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 32),
+      ),
+      onDismissed: (_) {
+        HapticFeedback.heavyImpact();
+        fs.updateOrderStatus(order.id, nextStatus);
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: stateColor.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: stateColor.withOpacity(0.3), width: 1.5),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('TOKEN', style: GoogleFonts.outfit(color: AppColors.primary, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
-                    Text('#${order.tokenNumber}', style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.black, color: Colors.white)),
-                  ],
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(DateFormat.jm().format(order.createdAt), style: const TextStyle(color: Colors.white38, fontSize: 12)),
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: order.orderType == 'dineIn' ? Colors.orangeAccent.withOpacity(0.1) : Colors.cyanAccent.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        order.orderType == 'dineIn' ? 'DINE-IN' : 'DELIVERY',
-                        style: TextStyle(
-                          color: order.orderType == 'dineIn' ? Colors.orangeAccent : Colors.cyanAccent,
-                          fontSize: 10, 
-                          fontWeight: FontWeight.bold
-                        ),
-                      ),
+                // MASSIVE TOKEN SIDEBAR
+                Container(
+                  width: 100,
+                  color: stateColor.withOpacity(0.2),
+                  child: Center(
+                    child: Text(
+                      order.tokenNumber,
+                      style: GoogleFonts.outfit(fontSize: 42, fontWeight: FontWeight.black, color: Colors.white),
                     ),
-                  ],
+                  ),
+                ),
+                
+                // ORDER DETAILS
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(order.orderType == 'dineIn' ? Icons.restaurant_rounded : Icons.delivery_dining_rounded, size: 14, color: Colors.white38),
+                            const SizedBox(width: 6),
+                            Text(
+                              order.orderType == 'dineIn' ? 'DINE-IN' : 'DELIVERY',
+                              style: const TextStyle(color: Colors.white38, fontSize: 10, fontWeight: FontWeight.w900),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        ...order.items.map((item) => Text(
+                          '${item['quantity']}x ${item['name']}',
+                          style: GoogleFonts.outfit(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                        )),
+                        const SizedBox(height: 16),
+                        // Action Reminder
+                        Row(
+                          children: [
+                            Icon(actionIcon, size: 16, color: stateColor),
+                            const SizedBox(width: 8),
+                            Text(
+                              'SWIPE TO ADVANCE',
+                              style: TextStyle(color: stateColor, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
-            const Divider(height: 32, color: Colors.white10),
-            
-            // Item List
-            ...order.items.map((item) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                children: [
-                  Container(
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
-                    child: Center(child: Text('${item['quantity']}', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 12))),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(child: Text(item['name'], style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500))),
-                ],
-              ),
-            )),
-            
-            const SizedBox(height: 24),
-            
-            // Progress Button
-            if (order.status != 'Completed' && order.status != 'Cancelled')
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    HapticFeedback.mediumImpact();
-                    fs.updateOrderStatus(order.id, nextStatus);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: actionColor,
-                    foregroundColor: actionColor == AppColors.primary ? Colors.black : Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    elevation: 0,
-                  ),
-                  child: Text(actionLabel, style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1)),
-                ),
-              ),
-          ],
+          ),
         ),
       ),
     );
