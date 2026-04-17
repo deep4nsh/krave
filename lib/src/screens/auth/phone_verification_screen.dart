@@ -56,7 +56,7 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
         await fs.updateUserPhone(user.uid, _phoneController.text);
         
         // Refresh UserProvider to trigger Root navigation
-        await userProvider.init(user.uid);
+        userProvider.init(user.uid);
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));

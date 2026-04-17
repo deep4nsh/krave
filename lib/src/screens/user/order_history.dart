@@ -7,7 +7,7 @@ import '../../services/firestore_service.dart';
 import '../../services/pdf_invoice_service.dart';
 import '../../widgets/gradient_background.dart';
 import '../../widgets/glass_container.dart';
-import 'order_tracking.dart';
+import 'package:krave/src/screens/user/order_tracking.dart';
 
 class OrderHistoryScreen extends StatelessWidget {
   const OrderHistoryScreen({super.key});
@@ -137,7 +137,7 @@ class _OrderHistoryCard extends StatelessWidget {
       child: InkWell(
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => OrderTracking(orderId: order.id)),
+          MaterialPageRoute(builder: (_) => OrderTrackingScreen(orderId: order.id)),
         ),
         borderRadius: BorderRadius.circular(24),
         child: Padding(

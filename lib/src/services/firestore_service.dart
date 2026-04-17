@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../models/user_model.dart';
 import '../models/canteen_model.dart';
 import '../models/menu_item_model.dart';
@@ -8,6 +9,8 @@ import '../models/order_model.dart';
 import '../models/rider_model.dart';
 import '../models/transaction_model.dart';
 import 'package:uuid/uuid.dart';
+import 'auth_service.dart';
+import '../models/user_model.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -63,6 +66,26 @@ class FirestoreService {
       'canteenName': canteenName,
       'status': 'pending',
       'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<Map<String, dynamic>?> getOwnerDoc(String uid) async {
+    final doc = await _db.collection('Owners').doc(uid).get();
+    return doc.data();
+  }
+
+  Future<void> addMenuItem(String canteenId, Map<String, dynamic> data) async {
+    await _db.collection('MenuItems').add({
+      ...data,
+      'canteenId': canteenId,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Stream<Canteen?> streamCanteen(String canteenId) {
+    return _db.collection('Canteens').doc(canteenId).snapshots().map((d) {
+      if (!d.exists) return null;
+      return Canteen.fromMap(d.id, d.data()!);
     });
   }
 
@@ -251,6 +274,7 @@ class FirestoreService {
     required int totalAmount,
     required String paymentId,
     required String orderType,
+    String? riderId,
     Map<String, dynamic>? deliveryLocation,
     Map<String, dynamic>? fees,
   }) async {
@@ -343,10 +367,10 @@ class FirestoreService {
     });
   }
 
-  Stream<Rider?> streamRider(String riderId) {
+  Stream<RiderModel?> streamRider(String riderId) {
     return _db.collection('Riders').doc(riderId).snapshots().map((d) {
       if (!d.exists) return null;
-      return Rider.fromMap(d.id, d.data()!);
+      return RiderModel.fromMap(d.id, d.data()!);
     });
   }
 }

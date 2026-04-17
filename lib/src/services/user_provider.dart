@@ -13,6 +13,12 @@ class UserProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   double get balance => _user?.walletBalance ?? 0.0;
 
+  void setUser(KraveUser user) {
+    _user = user;
+    _isLoading = false;
+    notifyListeners();
+  }
+
   void init(String uid) {
     _isLoading = true;
     notifyListeners();

@@ -55,6 +55,7 @@ class _UserSignupScreenState extends State<UserSignupScreen> with SingleTickerPr
         email: _email,
         role: 'user',
         createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
       );
       await fs.createUser(user);
 

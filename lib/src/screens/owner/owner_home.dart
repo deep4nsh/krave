@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../theme/app_colors.dart';
 import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../../services/image_search_service.dart';
 import '../../widgets/gradient_background.dart';
+import '../../models/canteen_model.dart';
 import 'owner_dashboard_screen.dart';
 import 'owner_orders.dart';
 import 'manage_menu.dart';
@@ -71,7 +76,6 @@ class _OwnerHomeState extends State<OwnerHome> {
     });
   }
 
-  // Step 1: The dialog logic is now here, in the parent Scaffold
   void _addMenuItemDialog() {
     final nameCtrl = TextEditingController();
     final priceCtrl = TextEditingController();
@@ -196,11 +200,12 @@ class _OwnerHomeState extends State<OwnerHome> {
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.textHigh)
         ),
         actions: [
-          // Live Canteen Toggle
-          StreamBuilder<DocumentSnapshot>(
-            stream: context.read<FirestoreService>()._db.collection('Canteens').doc(_canteenId).snapshots(),
+          // Canteen Status Switch
+          StreamBuilder<Canteen?>(
+            stream: context.read<FirestoreService>().streamCanteen(_canteenId!),
             builder: (context, snapshot) {
-              final isOpen = (snapshot.data?.data() as Map<String, dynamic>?)?['isOpen'] ?? false;
+              final canteen = snapshot.data;
+              final isOpen = canteen?.isOpen ?? false;
               return Padding(
                 padding: const EdgeInsets.only(right: 8.0),
                 child: ChoiceChip(
@@ -210,11 +215,14 @@ class _OwnerHomeState extends State<OwnerHome> {
                   backgroundColor: Colors.redAccent.withOpacity(0.2),
                   onSelected: (val) {
                     HapticFeedback.heavyImpact();
-                    context.read<FirestoreService>().updateDoc('Canteens/$_canteenId', {'isOpen': val});
+                    context.read<FirestoreService>().updateCanteenStatus(
+                      _canteenId!,
+                      val ? VenueStatus.open : VenueStatus.closed,
+                    );
                   },
                 ),
               );
-            }
+            },
           ),
           IconButton(
             icon: const Icon(Icons.logout_rounded, color: Colors.white24, size: 20), 
