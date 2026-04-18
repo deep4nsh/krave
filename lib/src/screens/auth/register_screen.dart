@@ -97,6 +97,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       email: email,
                       role: role,
                       approved: role == 'user', // users auto-approved
+                      createdAt: DateTime.now(),
+                      updatedAt: DateTime.now(),
                     );
                     await fs.createUser(user);
 

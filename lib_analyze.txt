@@ -1,0 +1,89 @@
+Analyzing lib...
+
+  error - src/widgets/restaurant_card.dart:49:13 - Undefined name 'HapticFeedback'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+warning - main.dart:2:8 - Unused import: 'package:google_fonts/google_fonts.dart'. Try removing the import directive. - unused_import
+warning - src/screens/admin/owner_approval_screen.dart:5:8 - Unused import: '../../widgets/gradient_background.dart'. Try removing the import directive. - unused_import
+warning - src/screens/auth/login_screen.dart:5:8 - Unused import: '../../services/firestore_service.dart'. Try removing the import directive. - unused_import
+warning - src/screens/auth/login_screen.dart:7:8 - Unused import: '../admin/admin_home.dart'. Try removing the import directive. - unused_import
+warning - src/screens/auth/login_screen.dart:9:8 - Unused import: '../user/user_home.dart'. Try removing the import directive. - unused_import
+warning - src/screens/auth/login_screen.dart:10:8 - Unused import: '../owner/owner_home.dart'. Try removing the import directive. - unused_import
+warning - src/screens/auth/login_screen.dart:11:8 - Unused import: '../owner/waiting_approval_screen.dart'. Try removing the import directive. - unused_import
+warning - src/screens/owner/owner_dashboard_screen.dart:4:8 - Unused import: 'package:cloud_firestore/cloud_firestore.dart'. Try removing the import directive. - unused_import
+warning - src/screens/owner/owner_dashboard_screen.dart:9:8 - Unused import: '../../widgets/krave_loading.dart'. Try removing the import directive. - unused_import
+warning - src/screens/owner/owner_home.dart:4:8 - Unused import: 'package:cloud_firestore/cloud_firestore.dart'. Try removing the import directive. - unused_import
+warning - src/screens/owner/owner_orders.dart:5:8 - Unused import: 'package:intl/intl.dart'. Try removing the import directive. - unused_import
+warning - src/screens/owner/owner_orders.dart:6:8 - Unused import: 'package:flutter_animate/flutter_animate.dart'. Try removing the import directive. - unused_import
+warning - src/screens/owner/owner_orders.dart:10:8 - Unused import: '../../widgets/glass_container.dart'. Try removing the import directive. - unused_import
+warning - src/screens/user/cart_screen.dart:7:8 - Unused import: '../../services/auth_service.dart'. Try removing the import directive. - unused_import
+warning - src/screens/user/cart_screen.dart:128:11 - The value of the local variable 'theme' isn't used. Try removing the variable or using it. - unused_local_variable
+warning - src/screens/user/order_tracking.dart:9:8 - Unused import: '../../services/notification_service.dart'. Try removing the import directive. - unused_import
+warning - src/screens/user/profile_screen.dart:32:11 - The value of the local variable 'auth' isn't used. Try removing the variable or using it. - unused_local_variable
+warning - src/screens/user/transfer_money_screen.dart:4:8 - Unused import: 'package:flutter_animate/flutter_animate.dart'. Try removing the import directive. - unused_import
+warning - src/screens/user/transfer_money_screen.dart:10:8 - Unused import: '../../widgets/krave_loading.dart'. Try removing the import directive. - unused_import
+warning - src/screens/user/user_home.dart:7:8 - Unused import: '../../services/auth_service.dart'. Try removing the import directive. - unused_import
+warning - src/services/firestore_service.dart:3:8 - Unused import: 'package:flutter/foundation.dart'. Try removing the import directive. - unused_import
+warning - src/services/firestore_service.dart:4:8 - Unused import: 'package:google_fonts/google_fonts.dart'. Try removing the import directive. - unused_import
+warning - src/services/firestore_service.dart:10:8 - Unused import: '../models/transaction_model.dart'. Try removing the import directive. - unused_import
+warning - src/services/firestore_service.dart:12:8 - Unused import: 'auth_service.dart'. Try removing the import directive. - unused_import
+warning - src/services/firestore_service.dart:13:8 - Duplicate import. Try removing all but one import of the library. - duplicate_import
+warning - src/widgets/restaurant_card.dart:21:11 - The value of the local variable 'theme' isn't used. Try removing the variable or using it. - unused_local_variable
+warning - src/widgets/restaurant_card.dart:23:11 - The value of the local variable 'isBusy' isn't used. Try removing the variable or using it. - unused_local_variable
+   info - src/screens/admin/admin_home.dart:148:49 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/screens/auth/login_screen.dart:131:45 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/screens/auth/phone_verification_screen.dart:38:26 - Don't use 'BuildContext's across async gaps. Try rewriting the code to not use the 'BuildContext', or guard the use with a 'mounted' check. - use_build_context_synchronously
+   info - src/screens/owner/manage_menu.dart:63:31 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/screens/owner/manage_menu.dart:65:50 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/screens/owner/manage_menu.dart:105:15 - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/screens/owner/owner_dashboard_screen.dart:42:25 - The parameter name 'sum' matches a visible type name. Try adding a name for the parameter or changing the parameter name to not match an existing type. - avoid_types_as_parameter_names
+   info - src/screens/owner/owner_dashboard_screen.dart:145:40 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/screens/owner/owner_home.dart:215:53 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/screens/owner/owner_home.dart:270:42 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/screens/owner/owner_home.dart:274:33 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/screens/owner/owner_orders.dart:144:29 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/screens/owner/owner_orders.dart:146:48 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/screens/owner/owner_orders.dart:157:37 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/screens/user/cart_screen.dart:142:57 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/screens/user/order_history.dart:165:62 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/screens/user/order_history.dart:173:42 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/screens/user/order_history.dart:175:61 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/screens/user/order_history.dart:208:62 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/screens/user/order_history.dart:226:75 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/screens/user/order_tracking.dart:260:38 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/screens/user/order_tracking.dart:262:57 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/screens/user/order_tracking.dart:267:52 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/screens/user/profile_screen.dart:26:28 - Don't use 'BuildContext's across async gaps. Try rewriting the code to not use the 'BuildContext', or guard the use with a 'mounted' check. - use_build_context_synchronously
+   info - src/screens/user/profile_screen.dart:117:68 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/screens/user/profile_screen.dart:164:84 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/screens/user/profile_screen.dart:165:60 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/screens/user/transfer_money_screen.dart:145:109 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/screens/user/transfer_money_screen.dart:158:109 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/screens/user/user_home.dart:345:52 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/services/image_search_service.dart:28:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - src/services/image_search_service.dart:34:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - src/services/image_search_service.dart:50:9 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - src/services/image_search_service.dart:51:9 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - src/services/image_search_service.dart:54:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - src/services/pdf_invoice_service.dart:67:12 - 'Table.fromTextArray' is deprecated and shouldn't be used. Use TableHelper.fromTextArray() instead. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/services/watchdog_service.dart:19:5 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - src/services/watchdog_service.dart:75:5 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - src/theme/app_theme.dart:16:7 - 'background' is deprecated and shouldn't be used. Use surface instead. This feature was deprecated after v3.18.0-0.1.pre. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/theme/app_theme.dart:17:7 - 'onBackground' is deprecated and shouldn't be used. Use onSurface instead. This feature was deprecated after v3.18.0-0.1.pre. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/widgets/developer_note_dialog.dart:27:48 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/widgets/developer_note_dialog.dart:36:52 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/widgets/developer_note_dialog.dart:38:71 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/widgets/developer_note_dialog.dart:67:54 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/widgets/glass_container.dart:38:26 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/widgets/glass_container.dart:40:62 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/widgets/gradient_background.dart:17:31 - 'background' is deprecated and shouldn't be used. Use surface instead. This feature was deprecated after v3.18.0-0.1.pre. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/widgets/gradient_background.dart:18:31 - 'background' is deprecated and shouldn't be used. Use surface instead. This feature was deprecated after v3.18.0-0.1.pre. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/widgets/gradient_background.dart:34:50 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/widgets/krave_button.dart:36:23 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/widgets/krave_button.dart:44:30 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/widgets/krave_loading.dart:9:3 - Constructors in '@immutable' classes should be declared as 'const'. Try adding 'const' to the constructor declaration. - prefer_const_constructors_in_immutables
+   info - src/widgets/krave_textfield.dart:38:50 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/widgets/krave_textfield.dart:55:52 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/widgets/krave_textfield.dart:59:69 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/widgets/krave_textfield.dart:69:52 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - src/widgets/restaurant_card.dart:147:68 - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+
+85 issues found.

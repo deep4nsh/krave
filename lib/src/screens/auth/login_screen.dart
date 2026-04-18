@@ -2,18 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
-import '../../services/firestore_service.dart';
-import '../../widgets/gradient_background.dart'; // Import the new background
-import '../admin/admin_home.dart';
 import '../auth/user_signup.dart';
-import '../user/user_home.dart';
-import '../owner/owner_home.dart';
-import '../owner/waiting_approval_screen.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../widgets/krave_button.dart';
 import '../../widgets/krave_textfield.dart';
 import '../../widgets/glass_container.dart';
 import '../../widgets/scale_button.dart';
+import '../../widgets/gradient_background.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -61,31 +56,15 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     setState(() => _loading = true);
 
     final auth = context.read<AuthService>();
-    final fs = context.read<FirestoreService>();
     final messenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
 
     try {
-      final cred = await auth.loginWithEmail(_email, _password);
-      final role = await fs.getUserRole(cred.user!.uid);
-
-      // Navigate based on role
-      final pageRoute = switch (role) {
-        'admin' => MaterialPageRoute(builder: (_) => const AdminHome()),
-        'approvedOwner' => MaterialPageRoute(builder: (_) => const OwnerHome()),
-        'pendingOwner' => MaterialPageRoute(builder: (_) => const WaitingApprovalScreen()),
-        'user' => MaterialPageRoute(builder: (_) => const UserHome()),
-        _ => null,
-      };
-
-      if (pageRoute != null) {
-        navigator.pushReplacement(pageRoute);
-      } else {
-        messenger.showSnackBar(const SnackBar(content: Text('No account found! Please register.')));
-        await auth.logout();
-      }
+      await auth.loginWithEmail(_email, _password);
+      // Navigation is now handled centrally by the Root widget in main.dart
     } on Exception catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.toString().split('] ').last)));
+      if (mounted) {
+        messenger.showSnackBar(SnackBar(content: Text(e.toString().split('] ').last)));
+      }
     } finally {
       if (mounted) {
         setState(() => _loading = false);

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
@@ -96,20 +97,25 @@ class _CartScreenState extends State<CartScreen> {
 
     if (_paymentMethod == 'wallet') {
       if (userProvider.balance < total) {
+        HapticFeedback.vibrate();
         setState(() => _isProcessing = false);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Insufficient Wallet Balance!')));
         return;
       }
       
       try {
+        HapticFeedback.mediumImpact();
         await fs.processWalletPayment(userProvider.user!.id, total.toDouble(), 'pending_order');
-        await userProvider.refreshUser();
         _completeOrder('wallet_tx_${DateTime.now().millisecondsSinceEpoch}');
       } catch (e) {
-        setState(() => _isProcessing = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Wallet Error: $e')));
+        if (mounted) {
+          HapticFeedback.vibrate();
+          setState(() => _isProcessing = false);
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Wallet Error: $e')));
+        }
       }
     } else {
+      HapticFeedback.lightImpact();
       _payment.openCheckout(
         amountInPaise: (total * 100).toInt(),
         orderNote: 'Krave Order',
@@ -146,7 +152,10 @@ class _CartScreenState extends State<CartScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                     child: _OrderTypeToggle(
                       selectedType: _orderType,
-                      onChanged: (type) => setState(() => _orderType = type),
+                      onChanged: (type) {
+                        HapticFeedback.selectionClick();
+                        setState(() => _orderType = type);
+                      },
                     ),
                   ),
                 ),
@@ -167,7 +176,10 @@ class _CartScreenState extends State<CartScreen> {
                         _PaymentMethodSelector(
                           selectedMethod: _paymentMethod,
                           balance: userProvider.balance,
-                          onChanged: (m) => setState(() => _paymentMethod = m),
+                          onChanged: (m) {
+                            HapticFeedback.selectionClick();
+                            setState(() => _paymentMethod = m);
+                          },
                         ),
                         const SizedBox(height: 20),
                         _BillDetailsCard(cart: cart, orderType: _orderType),
@@ -349,8 +361,8 @@ class _BillDetailsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const double platformFee = 2;
     final double deliveryFee = orderType == 'delivery' ? 15 : 0;
-    final double platformFee = 2;
     final double total = cart.totalAmount + deliveryFee + platformFee;
 
     return Container(
@@ -359,17 +371,17 @@ class _BillDetailsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('Bill Details', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textHigh)),
+          Text('Bill Details', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textHigh)),
           const SizedBox(height: 20),
           _BillRow(label: 'Item Total', value: '₹${cart.totalAmount.toStringAsFixed(0)}'),
           _BillRow(label: 'Delivery Fee', value: '₹$deliveryFee', isGreen: orderType == 'dineIn'),
-          _BillRow(label: 'Platform Fee', value: '₹$platformFee'),
+          const _BillRow(label: 'Platform Fee', value: '₹$platformFee'),
           const Divider(height: 40, thickness: 1, color: AppColors.glassBorder),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Total Pay', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textHigh)),
-              Text('₹${total.toStringAsFixed(0)}', style: const TextStyle(color: AppColors.primary, fontSize: 24, fontWeight: FontWeight.bold)),
+              Text('Total Pay', style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textHigh)),
+              Text('₹${total.toStringAsFixed(0)}', style: GoogleFonts.outfit(color: AppColors.primary, fontSize: 24, fontWeight: FontWeight.bold)),
             ],
           ),
         ],

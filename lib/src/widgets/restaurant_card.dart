@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -18,9 +19,7 @@ class RestaurantCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final isClosed = canteen.status == VenueStatus.closed;
-    final isBusy = canteen.status == VenueStatus.busy;
     
     String distanceStr = 'Near you';
     if (userPosition != null) {
@@ -46,6 +45,7 @@ class RestaurantCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         child: InkWell(
           onTap: () {
+            HapticFeedback.lightImpact();
             Navigator.push(context, MaterialPageRoute(builder: (_) => CanteenMenu(canteen: canteen)));
           },
           child: Column(

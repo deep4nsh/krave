@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:collection/collection.dart';
@@ -27,9 +28,7 @@ class _CanteenMenuState extends State<CanteenMenu> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<CartProvider>().clearCart();
-    });
+    // REMOVED clearCart() - Let users keep their progress if they navigate back/forth
   }
 
   @override
@@ -72,7 +71,7 @@ class _CanteenMenuState extends State<CanteenMenu> {
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
-                          colors: [Colors.black.withOpacity(0.2), Colors.black.withOpacity(0.9)],
+                          colors: [Colors.black.withValues(alpha: 0.2), Colors.black.withValues(alpha: 0.9)],
                         ),
                       ),
                     ),
@@ -112,7 +111,7 @@ class _CanteenMenuState extends State<CanteenMenu> {
                               padding: const EdgeInsets.fromLTRB(20, 24, 20, 10),
                               child: Text(category, style: GoogleFonts.outfit(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textHigh)),
                             ),
-                            ...categoryItems.map((item) => MenuItemCard(item: item, canteen: widget.canteen)).toList(),
+                            ...categoryItems.map((item) => MenuItemCard(item: item, canteen: widget.canteen)),
                           ],
                         );
                       },
@@ -199,7 +198,10 @@ class MenuItemCard extends StatelessWidget {
                     Positioned(
                       bottom: -8,
                       child: (isAvailable && canteen.isOpen) 
-                        ? (cartItem == null ? _AddButton(onPressed: () => cart.addItem(item)) : _Stepper(item: cartItem))
+                        ? (cartItem == null ? _AddButton(onPressed: () {
+                            HapticFeedback.lightImpact();
+                            cart.addItem(item);
+                          }) : _Stepper(item: cartItem, model: item))
                         : _UnavailableBadge(label: !canteen.isOpen ? 'CLOSED' : 'UNAVAILABLE'),
                     ),
                   ],
@@ -224,7 +226,7 @@ class _TagBadge extends StatelessWidget {
   final String tag;
   const _TagBadge({required this.tag});
   @override
-  Widget build(BuildContext context) => Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(4)), child: Text(tag.toUpperCase(), style: const TextStyle(color: AppColors.primary, fontSize: 8, fontWeight: FontWeight.bold)));
+  Widget build(BuildContext context) => Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)), child: Text(tag.toUpperCase(), style: const TextStyle(color: AppColors.primary, fontSize: 8, fontWeight: FontWeight.bold)));
 }
 
 class _AddButton extends StatelessWidget {
@@ -243,7 +245,8 @@ class _UnavailableBadge extends StatelessWidget {
 
 class _Stepper extends StatelessWidget {
   final CartItem item;
-  const _Stepper({required this.item});
+  final MenuItemModel model;
+  const _Stepper({required this.item, required this.model});
   @override
   Widget build(BuildContext context) {
     final cart = context.read<CartProvider>();
@@ -253,9 +256,25 @@ class _Stepper extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          IconButton(icon: const Icon(Icons.remove, size: 16, color: Colors.black), onPressed: () => cart.removeSingleItem(item.id), constraints: const BoxConstraints(minWidth: 32, minHeight: 32), padding: EdgeInsets.zero),
+          IconButton(
+            icon: const Icon(Icons.remove, size: 16, color: Colors.black), 
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              cart.removeSingleItem(item.id);
+            }, 
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32), 
+            padding: EdgeInsets.zero
+          ),
           Text('${item.quantity}', style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-          IconButton(icon: const Icon(Icons.add, size: 16, color: Colors.black), onPressed: () => cart.addItem(MenuItemModel(id: item.id, name: item.name, price: item.price)), constraints: const BoxConstraints(minWidth: 32, minHeight: 32), padding: EdgeInsets.zero),
+          IconButton(
+            icon: const Icon(Icons.add, size: 16, color: Colors.black), 
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              cart.addItem(model);
+            }, 
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32), 
+            padding: EdgeInsets.zero
+          ),
         ],
       ),
     );

@@ -10,6 +10,8 @@ class KraveTextField extends StatelessWidget {
   final TextInputType? keyboardType;
   final Widget? suffixIcon;
   final Function(String)? onChanged;
+  final int? maxLength;
+  final TextInputAction? textInputAction;
 
   const KraveTextField({
     super.key,
@@ -21,6 +23,8 @@ class KraveTextField extends StatelessWidget {
     this.keyboardType,
     this.suffixIcon,
     this.onChanged,
+    this.maxLength,
+    this.textInputAction,
   });
 
   @override
@@ -48,8 +52,11 @@ class KraveTextField extends StatelessWidget {
             obscureText: obscureText,
             keyboardType: keyboardType,
             onChanged: onChanged,
+            maxLength: maxLength,
+            textInputAction: textInputAction,
             style: TextStyle(color: theme.colorScheme.onSurface),
             decoration: InputDecoration(
+              counterText: "", // Hide character counter
               hintText: hintText,
               hintStyle: TextStyle(
                 color: theme.colorScheme.onSurface.withOpacity(0.3),

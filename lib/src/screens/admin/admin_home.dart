@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/gradient_background.dart';
+import '../../widgets/glass_container.dart';
+import '../../theme/app_colors.dart';
 import '../auth/login_screen.dart';
 import 'owner_approval_screen.dart';
 import 'manage_canteens.dart';
@@ -10,6 +14,25 @@ class AdminHome extends StatelessWidget {
   const AdminHome({super.key});
 
   Future<void> _logout(BuildContext context) async {
+    HapticFeedback.mediumImpact();
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text('Sign Out', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: const Text('Are you sure you want to log out?', style: TextStyle(color: AppColors.textMed)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Sign Out', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
     final navigator = Navigator.of(context);
     final auth = context.read<AuthService>();
     try {
@@ -30,11 +53,14 @@ class AdminHome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Admin Dashboard'),
+        title: Text('Admin Dashboard', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.textHigh)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout, color: Colors.redAccent),
+            icon: const Icon(Icons.logout_rounded, color: Colors.white24, size: 22),
             tooltip: 'Logout',
             onPressed: () => _logout(context),
           ),
@@ -129,41 +155,39 @@ class _AdminTaskCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.lightImpact();
+          onTap();
+        },
+        child: GlassContainer(
           padding: const EdgeInsets.all(20.0),
+          borderRadius: BorderRadius.circular(24),
+          opacity: 0.05,
           child: Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      theme.colorScheme.primary.withOpacity(0.3),
-                      Colors.transparent,
-                    ],
-                  ),
+                  color: AppColors.primary.withOpacity(0.1),
                 ),
-                child: Icon(icon, size: 40, color: theme.colorScheme.primary),
+                child: Icon(icon, size: 32, color: AppColors.primary),
               ),
               const SizedBox(width: 20),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                    Text(title, style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textHigh)),
                     const SizedBox(height: 4),
-                    Text(subtitle, style: theme.textTheme.bodyMedium),
+                    Text(subtitle, style: const TextStyle(fontSize: 13, color: AppColors.textLow)),
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right, color: theme.colorScheme.secondary, size: 30),
+              const Icon(Icons.chevron_right_rounded, color: Colors.white12, size: 24),
             ],
           ),
         ),

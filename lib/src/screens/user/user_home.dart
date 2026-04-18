@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
@@ -21,7 +22,7 @@ class UserHome extends StatefulWidget {
 }
 
 class _UserHomeState extends State<UserHome> {
-  String _searchQuery = '';
+  final ValueNotifier<String> _searchQuery = ValueNotifier<String>('');
   Position? _currentPosition;
   bool _isLoadingLocation = true;
 
@@ -29,6 +30,12 @@ class _UserHomeState extends State<UserHome> {
   void initState() {
     super.initState();
     _initLocation();
+  }
+
+  @override
+  void dispose() {
+    _searchQuery.dispose();
+    super.dispose();
   }
 
   Future<void> _initLocation() async {
@@ -47,6 +54,23 @@ class _UserHomeState extends State<UserHome> {
     if (hour < 17) return 'Lunch break? We got you.';
     if (hour < 21) return 'Dinner is calling.';
     return 'Midnight cravings?';
+  }
+
+  List<Canteen> _filterVenues(List<Canteen> allCanteens, String query) {
+    if (_isLoadingLocation) return [];
+    
+    return allCanteens.where((v) {
+      bool matchesSearch = v.name.toLowerCase().contains(query.toLowerCase());
+      if (!matchesSearch) return false;
+      if (_currentPosition == null) return v.type == VenueType.canteen;
+      return LocationHelper.isWithinRadius(
+        userLat: _currentPosition!.latitude,
+        userLng: _currentPosition!.longitude,
+        venueLat: v.latitude,
+        venueLng: v.longitude,
+        radiusInMeters: v.deliveryRadius,
+      );
+    }).toList();
   }
 
   @override
@@ -69,7 +93,7 @@ class _UserHomeState extends State<UserHome> {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    AppColors.primary.withOpacity(0.08),
+                    AppColors.primary.withValues(alpha: 0.08),
                     Colors.transparent,
                   ],
                 ),
@@ -78,12 +102,13 @@ class _UserHomeState extends State<UserHome> {
           ),
           
           CustomScrollView(
+            physics: const BouncingScrollPhysics(),
             slivers: [
               SliverAppBar(
                 expandedHeight: 140,
                 floating: true,
                 pinned: true,
-                backgroundColor: AppColors.background.withOpacity(0.8),
+                backgroundColor: AppColors.background.withValues(alpha: 0.8),
                 surfaceTintColor: Colors.transparent,
                 elevation: 0,
                 flexibleSpace: FlexibleSpaceBar(
@@ -115,11 +140,17 @@ class _UserHomeState extends State<UserHome> {
                 actions: [
                   IconButton(
                     icon: _AppBarAction(icon: Icons.history_rounded),
-                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const OrderHistoryScreen())),
+                    onPressed: () {
+                      HapticFeedback.lightImpact();
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const OrderHistoryScreen()));
+                    },
                   ),
                   IconButton(
                     icon: _AppBarAction(icon: Icons.person_outline_rounded),
-                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
+                    onPressed: () {
+                      HapticFeedback.lightImpact();
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+                    },
                   ),
                   const SizedBox(width: 8),
                 ],
@@ -149,14 +180,14 @@ class _UserHomeState extends State<UserHome> {
                             border: Border.all(color: AppColors.glassBorder),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
+                                color: Colors.black.withValues(alpha: 0.2),
                                 blurRadius: 20,
                                 offset: const Offset(0, 10),
                               ),
                             ],
                           ),
                           child: TextField(
-                            onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
+                            onChanged: (value) => _searchQuery.value = value,
                             decoration: InputDecoration(
                               hintText: 'Search for cravings...',
                               prefixIcon: Icon(Icons.search_rounded, color: AppColors.primary, size: 22),
@@ -173,20 +204,31 @@ class _UserHomeState extends State<UserHome> {
                       ).animate().scale(delay: 300.ms, begin: const Offset(0.95, 0.95), curve: Curves.easeOutBack),
                     ),
                     // Categories Row
-                    SizedBox(
-                      height: 100,
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        children: [
-                          _CategoryItem(label: 'All', icon: Icons.restaurant_rounded, isSelected: _searchQuery.isEmpty),
-                          _CategoryItem(label: 'Burger', icon: Icons.lunch_dining_rounded),
-                          _CategoryItem(label: 'Pizza', icon: Icons.local_pizza_rounded),
-                          _CategoryItem(label: 'Coffee', icon: Icons.coffee_rounded),
-                          _CategoryItem(label: 'Desert', icon: Icons.icecream_rounded),
-                        ],
-                      ),
-                    ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.2),
+                    ValueListenableBuilder<String>(
+                      valueListenable: _searchQuery,
+                      builder: (context, query, _) {
+                        return SizedBox(
+                          height: 100,
+                          child: ListView(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            children: [
+                              GestureDetector(
+                                onTap: () {
+                                  HapticFeedback.lightImpact();
+                                  _searchQuery.value = '';
+                                },
+                                child: _CategoryItem(label: 'All', icon: Icons.restaurant_rounded, isSelected: query.isEmpty),
+                              ),
+                              const _CategoryItem(label: 'Burger', icon: Icons.lunch_dining_rounded),
+                              const _CategoryItem(label: 'Pizza', icon: Icons.local_pizza_rounded),
+                              const _CategoryItem(label: 'Coffee', icon: Icons.coffee_rounded),
+                              const _CategoryItem(label: 'Desert', icon: Icons.icecream_rounded),
+                            ],
+                          ),
+                        ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.2);
+                      }
+                    ),
                     const SizedBox(height: 24),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -206,56 +248,51 @@ class _UserHomeState extends State<UserHome> {
               StreamBuilder<List<Canteen>>(
                 stream: fs.streamApprovedCanteens(),
                 builder: (context, snap) {
-                  if (snap.connectionState == ConnectionState.waiting || _isLoadingLocation) {
-                    return SliverPadding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      sliver: SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) => const SkeletonCanteenCard(),
-                          childCount: 3,
-                        ),
-                      ),
-                    );
-                  }
-                  
-                  final venues = (snap.data ?? []).where((v) {
-                    bool matchesSearch = v.name.toLowerCase().contains(_searchQuery);
-                    if (!matchesSearch) return false;
-                    if (_currentPosition == null) return v.type == VenueType.canteen;
-                    return LocationHelper.isWithinRadius(
-                      userLat: _currentPosition!.latitude,
-                      userLng: _currentPosition!.longitude,
-                      venueLat: v.latitude,
-                      venueLng: v.longitude,
-                      radiusInMeters: v.deliveryRadius,
-                    );
-                  }).toList();
+                  return ValueListenableBuilder<String>(
+                    valueListenable: _searchQuery,
+                    builder: (context, query, _) {
+                      if (snap.connectionState == ConnectionState.waiting || _isLoadingLocation) {
+                        return SliverPadding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          sliver: SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) => const SkeletonCanteenCard(),
+                              childCount: 3,
+                            ),
+                          ),
+                        );
+                      }
+                      
+                      final venues = _filterVenues(snap.data ?? [], query);
 
-                  if (venues.isEmpty) {
-                    return SliverFillRemaining(
-                      child: Center(
-                        child: Text('No venues found nearby.', style: TextStyle(color: AppColors.textLow)),
-                      ),
-                    );
-                  }
-                  
-                  return SliverPadding(
-                    padding: const EdgeInsets.all(16.0),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final canteen = venues[index];
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 20.0),
-                            child: RestaurantCard(
-                              canteen: canteen, 
-                              userPosition: _currentPosition,
-                            ).animate().fadeIn(delay: (100 * index).ms).slideY(begin: 0.1),
-                          );
-                        },
-                        childCount: venues.length,
-                      ),
-                    ),
+                      if (venues.isEmpty) {
+                        return const SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: Center(
+                            child: Text('No venues found nearby.', style: TextStyle(color: AppColors.textLow)),
+                          ),
+                        );
+                      }
+                      
+                      return SliverPadding(
+                        padding: const EdgeInsets.all(16.0),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final canteen = venues[index];
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 20.0),
+                                child: RestaurantCard(
+                                  canteen: canteen, 
+                                  userPosition: _currentPosition,
+                                ).animate().fadeIn(delay: (100 * index).ms).slideY(begin: 0.1),
+                              );
+                            },
+                            childCount: venues.length,
+                          ),
+                        ),
+                      );
+                    }
                   );
                 },
               ),

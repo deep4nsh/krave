@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -9,9 +10,23 @@ import '../../widgets/glass_container.dart';
 import '../../theme/app_colors.dart';
 import '../auth/login_screen.dart';
 import 'transfer_money_screen.dart';
+import 'order_history.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
+
+  void _showComingSoon(BuildContext context, String feature) {
+    HapticFeedback.lightImpact();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$feature feature coming soon!', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.primary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
 
   Future<void> _logout(BuildContext context) async {
     final navigator = Navigator.of(context);
@@ -57,18 +72,24 @@ class ProfileScreen extends StatelessWidget {
                 icon: Icons.person_outline_rounded,
                 title: 'Account Settings',
                 subtitle: 'Manage your profile and security',
+                onTap: () => _showComingSoon(context, 'Account Settings'),
               ),
               _buildProfileOption(
                 context,
                 icon: Icons.history_rounded,
                 title: 'Order Settings',
                 subtitle: 'History, tax invoices, and refunds',
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const OrderHistoryScreen()));
+                },
               ),
               _buildProfileOption(
                 context,
                 icon: Icons.help_outline_rounded,
                 title: 'Help & Support',
                 subtitle: 'Get assistance and FAQs',
+                onTap: () => _showComingSoon(context, 'Help & Support'),
               ),
               const SizedBox(height: 32),
               
@@ -173,28 +194,31 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProfileOption(BuildContext context, {required IconData icon, required String title, required String subtitle}) {
+  Widget _buildProfileOption(BuildContext context, {required IconData icon, required String title, required String subtitle, VoidCallback? onTap}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: GlassContainer(
-        padding: const EdgeInsets.all(16),
-        borderRadius: BorderRadius.circular(16),
-        opacity: 0.05,
-        child: Row(
-          children: [
-            Icon(icon, color: AppColors.primary, size: 24),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textHigh)),
-                  Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.white30)),
-                ],
+      child: GestureDetector(
+        onTap: onTap,
+        child: GlassContainer(
+          padding: const EdgeInsets.all(16),
+          borderRadius: BorderRadius.circular(16),
+          opacity: 0.05,
+          child: Row(
+            children: [
+              Icon(icon, color: AppColors.primary, size: 24),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textHigh)),
+                    Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.white30)),
+                  ],
+                ),
               ),
-            ),
-            const Icon(Icons.chevron_right_rounded, color: Colors.white12),
-          ],
+              const Icon(Icons.chevron_right_rounded, color: Colors.white12),
+            ],
+          ),
         ),
       ),
     );

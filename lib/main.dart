@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:provider/provider.dart';
@@ -66,7 +65,7 @@ class Root extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthService>();
+    final auth = context.read<AuthService>();
 
     return StreamBuilder(
       stream: auth.authStateChanges(),
@@ -75,57 +74,81 @@ class Root extends StatelessWidget {
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
 
-        if (snapshot.hasData) {
-          return FutureBuilder<String>(
-            future: context.read<FirestoreService>().getUserRole(snapshot.data!.uid),
-            builder: (context, roleSnapshot) {
-              if (roleSnapshot.connectionState == ConnectionState.waiting) {
-                return const Scaffold(body: Center(child: CircularProgressIndicator()));
-              }
-
-              switch (roleSnapshot.data) {
-                case 'admin':
-                  return const AdminHome();
-                case 'approvedOwner':
-                  return const OwnerHome();
-                case 'pendingOwner':
-                  return const WaitingApprovalScreen();
-                case 'user':
-                  return FutureBuilder(
-                    future: context.read<FirestoreService>().getUser(snapshot.data!.uid),
-                    builder: (context, userSnap) {
-                      if (userSnap.connectionState == ConnectionState.waiting) {
-                        return const Scaffold(body: Center(child: CircularProgressIndicator()));
-                      }
-                      
-                      if (userSnap.hasData && userSnap.data != null) {
-                        final kraveUser = userSnap.data!;
-                        context.read<UserProvider>().setUser(kraveUser);
-                        
-                        // Start Master Watchdog for the student
-                        WatchdogService().start(kraveUser.id);
-                        
-                        // GATE: If phone is missing, redirect to verification
-                        if (kraveUser.phone == null || kraveUser.phone!.isEmpty) {
-                          return const PhoneVerificationScreen();
-                        }
-                        
-                        return const UserHome();
-                      }
-                      
-                      // Case: Auth exists but Firestore doc is missing/propagating
-                      // Show verification screen as a fallback to ensure they complete it
-                      return const PhoneVerificationScreen();
-                    },
-                  );
-                default:
-                  return const LoginScreen();
-              }
-            },
-          );
+        final firebaseUser = snapshot.data;
+        if (firebaseUser == null) {
+          return const LoginScreen();
         }
 
-        return const LoginScreen();
+        // Bridge to UserProvider for profile and role management
+        return Consumer<UserProvider>(
+          builder: (context, userProvider, _) {
+            // Trigger session initialization if needed
+            if (userProvider.status == SessionStatus.initial || 
+                (userProvider.user == null && !userProvider.isLoading && userProvider.status != SessionStatus.error)) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                userProvider.initializeSession(firebaseUser.uid);
+              });
+            }
+
+            switch (userProvider.status) {
+              case SessionStatus.initial:
+              case SessionStatus.fetchingProfile:
+              case SessionStatus.authenticating:
+                return const Scaffold(body: Center(child: CircularProgressIndicator()));
+              
+              case SessionStatus.admin:
+                return const AdminHome();
+              
+              case SessionStatus.pendingOwner:
+                return const WaitingApprovalScreen();
+              
+              case SessionStatus.authenticated:
+                final profile = userProvider.user;
+                if (profile == null) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+                
+                // Logic side-effects (e.g., Master Watchdog)
+                WatchdogService().start(profile.id);
+
+                if (profile.role == 'approvedOwner') {
+                  return const OwnerHome();
+                }
+
+                if (profile.phone == null || profile.phone!.isEmpty) {
+                  return const PhoneVerificationScreen();
+                }
+                
+                return const UserHome();
+
+              case SessionStatus.error:
+                return Scaffold(
+                  body: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 48),
+                          const SizedBox(height: 16),
+                          Text('Session Error', style: Theme.of(context).textTheme.titleLarge),
+                          const SizedBox(height: 8),
+                          Text(userProvider.errorMessage ?? 'Unknown error', textAlign: TextAlign.center, style: const TextStyle(color: Colors.white60)),
+                          const SizedBox(height: 24),
+                          ElevatedButton(
+                            onPressed: () => userProvider.initializeSession(firebaseUser.uid),
+                            child: const Text('Retry Connection'),
+                          ),
+                          TextButton(onPressed: () => auth.logout(), child: const Text('Sign Out')),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              
+              case SessionStatus.unauthenticated:
+                return const LoginScreen();
+            }
+          },
+        );
       },
     );
   }

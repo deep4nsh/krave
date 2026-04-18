@@ -95,21 +95,51 @@ class _OwnerHomeState extends State<OwnerHome> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (isSaving) ...[
-                      const Center(child: CircularProgressIndicator()),
-                      const SizedBox(height: 16),
-                      const Text('Searching for image and saving...'),
+                      const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+                      const SizedBox(height: 24),
+                      Text(
+                        'Searching for image and saving...',
+                        style: GoogleFonts.outfit(color: AppColors.textMed, fontSize: 13),
+                      ),
                     ] else ...[
-                      TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name')),
-                      TextField(controller: priceCtrl, decoration: const InputDecoration(labelText: 'Price'), keyboardType: TextInputType.number),
-                      TextField(controller: categoryCtrl, decoration: const InputDecoration(labelText: 'Category')),
+                      TextField(
+                        controller: nameCtrl,
+                        decoration: _dialogInputDecoration('Name (e.g. Chicken Burger)', Icons.fastfood_rounded),
+                        style: const TextStyle(color: AppColors.textHigh),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: priceCtrl,
+                        decoration: _dialogInputDecoration('Price (₹)', Icons.payments_rounded),
+                        keyboardType: TextInputType.number,
+                        style: const TextStyle(color: AppColors.textHigh),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: categoryCtrl,
+                        decoration: _dialogInputDecoration('Category (e.g. Mains)', Icons.category_rounded),
+                        style: const TextStyle(color: AppColors.textHigh),
+                      ),
                     ]
                   ],
                 ),
               ),
               actions: isSaving ? [] : [
-                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                TextButton(
+                  onPressed: () {
+                    HapticFeedback.selectionClick();
+                    Navigator.pop(context);
+                  },
+                  child: Text('Cancel', style: TextStyle(color: AppColors.textLow)),
+                ),
                 ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
                   onPressed: () async {
+                    HapticFeedback.mediumImpact();
                     final fs = context.read<FirestoreService>();
                     final imageSearch = context.read<ImageSearchService>();
                     final messenger = ScaffoldMessenger.of(context);
@@ -120,12 +150,14 @@ class _OwnerHomeState extends State<OwnerHome> {
                     final category = categoryCtrl.text.trim();
 
                     if (name.isEmpty || priceText.isEmpty || category.isEmpty) {
-                      messenger.showSnackBar(const SnackBar(content: Text('All fields are required.')));
+                      HapticFeedback.vibrate();
+                      messenger.showSnackBar(const SnackBar(content: Text('Please fill in all fields.')));
                       return;
                     }
                     final parsedPrice = int.tryParse(priceText);
                     if (parsedPrice == null) {
-                      messenger.showSnackBar(const SnackBar(content: Text('Please enter a valid price.')));
+                      HapticFeedback.vibrate();
+                      messenger.showSnackBar(const SnackBar(content: Text('Invalid price format.')));
                       return;
                     }
 
@@ -140,19 +172,38 @@ class _OwnerHomeState extends State<OwnerHome> {
                         'available': true,
                         'photoUrl': imageUrl,
                       });
+                      HapticFeedback.heavyImpact();
                       navigator.pop();
                     } catch (e) {
                       messenger.showSnackBar(SnackBar(content: Text('Failed to add item: $e')));
                       setDialogState(() => isSaving = false);
                     }
                   },
-                  child: const Text('Add'),
+                  child: const Text('Add Item', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ],
             );
           },
         );
       },
+    );
+  }
+
+  InputDecoration _dialogInputDecoration(String label, IconData icon) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: AppColors.textLow, fontSize: 13),
+      prefixIcon: Icon(icon, color: AppColors.primary, size: 18),
+      filled: true,
+      fillColor: Colors.black.withOpacity(0.2),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: AppColors.glassBorder),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppColors.primary),
+      ),
     );
   }
 

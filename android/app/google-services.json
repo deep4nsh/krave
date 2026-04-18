@@ -12,7 +12,20 @@
           "package_name": "com.example.krave"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "325148399429-i45nj1jv4nrmah9k7aakvgdbtrepdm6u.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.krave",
+            "certificate_hash": "fd1183ace532d55383c245da50e5da212bdc4457"
+          }
+        },
+        {
+          "client_id": "325148399429-5omfpd151l3nld9qvhkrfoutuu7bsssr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDjf_w0-Kfb0SGyXUA41xqPHkO4Tul6JKw"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "325148399429-5omfpd151l3nld9qvhkrfoutuu7bsssr.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "325148399429-llndpa06fs3f2t857s0c85edpaiqfkem.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.krave"
+              }
+            }
+          ]
         }
       }
     }

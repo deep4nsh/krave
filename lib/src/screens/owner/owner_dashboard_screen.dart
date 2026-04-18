@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -187,23 +188,28 @@ class _TimePickerCard extends StatelessWidget {
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Edit Canteen Timings', style: TextStyle(color: Colors.white)),
+        backgroundColor: AppColors.surface,
+        title: Text('Edit Canteen Timings', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
         content: StatefulBuilder(
           builder: (context, setState) => Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
+                leading: const Icon(Icons.login_rounded, color: AppColors.primary),
                 title: const Text('Opening Time', style: TextStyle(color: Colors.white)),
-                trailing: Text(openingTime?.format(context) ?? 'Select', style: const TextStyle(color: Colors.white70)),
+                trailing: Text(openingTime?.format(context) ?? 'Select', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
                 onTap: () async {
+                  HapticFeedback.selectionClick();
                   final time = await showTimePicker(context: context, initialTime: const TimeOfDay(hour: 9, minute: 0));
                   if (time != null) setState(() => openingTime = time);
                 },
               ),
               ListTile(
+                leading: const Icon(Icons.logout_rounded, color: Colors.redAccent),
                 title: const Text('Closing Time', style: TextStyle(color: Colors.white)),
-                trailing: Text(closingTime?.format(context) ?? 'Select', style: const TextStyle(color: Colors.white70)),
+                trailing: Text(closingTime?.format(context) ?? 'Select', style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
                 onTap: () async {
+                  HapticFeedback.selectionClick();
                   final time = await showTimePicker(context: context, initialTime: const TimeOfDay(hour: 17, minute: 0));
                   if (time != null) setState(() => closingTime = time);
                 },
@@ -212,10 +218,22 @@ class _TimePickerCard extends StatelessWidget {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              HapticFeedback.selectionClick();
+              Navigator.pop(context);
+            },
+            child: Text('Cancel', style: TextStyle(color: AppColors.textLow)),
+          ),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
             onPressed: () async {
               if (openingTime != null && closingTime != null) {
+                HapticFeedback.mediumImpact();
                 await context.read<FirestoreService>().updateCanteenTimings(
                   canteenId,
                   openingTime!.format(context),
@@ -224,7 +242,7 @@ class _TimePickerCard extends StatelessWidget {
                 if (context.mounted) Navigator.pop(context);
               }
             },
-            child: const Text('Save'),
+            child: const Text('Save Timings', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),

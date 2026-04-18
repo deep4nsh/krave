@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -279,7 +281,7 @@ class _RiderCard extends StatelessWidget {
                 ),
               ),
               IconButton.filledTonal(
-                onPressed: () {},
+                onPressed: () => _callRider(context, rider.phone),
                 icon: const Icon(Icons.phone_in_talk_rounded, size: 20),
                 style: IconButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.black),
               ),
@@ -288,6 +290,38 @@ class _RiderCard extends StatelessWidget {
         );
       },
     );
+  }
+
+  Future<void> _callRider(BuildContext context, String phoneNumber) async {
+    HapticFeedback.lightImpact();
+    final Uri launchUri = Uri(
+      scheme: 'tel',
+      path: phoneNumber,
+    );
+
+    try {
+      if (await canLaunchUrl(launchUri)) {
+        await launchUrl(launchUri);
+      } else {
+        // Fallback: Copy to clipboard if dialer is not supported
+        await Clipboard.setData(ClipboardData(text: phoneNumber));
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Phone number copied to clipboard: $phoneNumber'),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: AppColors.primary,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not initiate call.')),
+        );
+      }
+    }
   }
 }
 
