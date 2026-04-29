@@ -7,6 +7,7 @@ import 'src/services/auth_service.dart';
 import 'src/services/firestore_service.dart';
 import 'src/services/image_search_service.dart';
 import 'src/services/notification_service.dart';
+import 'src/services/storage_service.dart';
 import 'src/services/cart_provider.dart';
 import 'src/screens/auth/login_screen.dart';
 import 'src/screens/auth/phone_verification_screen.dart';
@@ -41,6 +42,7 @@ class KraveApp extends StatelessWidget {
       providers: [
         Provider<AuthService>(create: (_) => AuthService()),
         Provider<FirestoreService>(create: (_) => FirestoreService()),
+        Provider<StorageService>(create: (_) => StorageService()),
         ChangeNotifierProvider<CartProvider>(create: (_) => CartProvider()),
         ChangeNotifierProvider<UserProvider>(create: (_) => UserProvider()),
         Provider<ImageSearchService>(create: (_) => ImageSearchService()),

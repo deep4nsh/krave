@@ -1,141 +1,322 @@
-# 🍔 Krave - The Ultimate Canteen Pre-ordering App
+# 🍔 Krave — Campus Canteen Pre-ordering Platform
 
-**Krave** is a modern, full-featured Flutter application designed to revolutionize the campus dining experience. It bridges the gap between hungry students/staff and canteen owners by enabling seamless pre-ordering, real-time tracking, and efficient order management.
+**Krave** is a full-stack, multi-app Flutter platform that revolutionizes campus dining. It connects students, canteen owners, and delivery riders through a seamless ecosystem of pre-ordering, real-time tracking, and intelligent order management — all powered by a serverless Firebase backend.
 
 ---
 
-## 🌟 Key Features
+## 📦 Repository Structure
 
-### 👤 For Users (Students/Staff)
-*   **Secure Authentication**: Easy sign-up and login using Email & Password.
-*   **Smart Search**: Instantly find canteens or specific food items using the powerful search bar.
-*   **Visual Menu**: Browse mouth-watering menus with high-quality images and clear **Veg/Non-Veg** indicators.
-*   **Cart Management**: Add multiple items, adjust quantities, and view a detailed bill summary before checkout.
-*   **Seamless Payments**: Integrated **Razorpay** payment gateway for secure transactions (currently in Test Mode).
-*   **Live Order Tracking**: Watch your order status change in real-time:
-    *   ⏳ **Pending**: Order sent to canteen.
-    *   👨‍🍳 **Preparing**: Food is being cooked.
-    *   ✅ **Ready**: Pick up your food!
-    *   🏁 **Completed**: Order finished.
-*   **Order History**: Access past orders and download PDF invoices for expense tracking.
+This is a **mono-repo** containing three distinct Flutter applications sharing a common core library:
+
+```
+krave/
+├── lib/                   # 📱 Main App (Students, Owners, Admins)
+├── rider_app/             # 🛵 Rider App (Delivery Riders)
+├── functions/             # ☁️  Firebase Cloud Functions (Node.js)
+├── admin-portal/          # 🖥️  Admin Web Portal
+├── assets/                # 🖼️  Shared Assets
+└── firestore.rules        # 🔒  Firestore Security Rules
+```
+
+---
+
+## 🌟 Features
+
+### 👤 For Students / Staff
+- **Secure Authentication** — Email/Password & **Google Sign-In**
+- **Smart Search** — Instantly find canteens or food items
+- **Visual Menu** — Browse menus with high-quality images, Veg/Non-Veg indicators, and real-time availability
+- **Cart Management** — Add items, adjust quantities, and view a detailed bill before checkout
+- **Seamless Payments** — **Razorpay** integration for secure transactions
+- **Live Order Tracking** — Real-time status updates:
+  - ⏳ **Pending** → 👨‍🍳 **Preparing** → ✅ **Ready** → 🏁 **Completed**
+- **Order History** — View past orders and download **PDF invoices**
+- **Transfer / Wallet** — Internal money transfer functionality
+- **Help & Support** — In-app support screen
+- **Profile Management** — Full profile editing with image upload
 
 ### 🏪 For Canteen Owners
-*   **Business Dashboard**: Get a bird's-eye view of your business with daily stats:
-    *   Total Pending Orders
-    *   Orders In-Progress
-    *   Today's Revenue
-    *   Completed Orders Count
-*   **Menu Control**: Full control to **Add**, **Edit**, or **Delete** menu items. Set prices, categories, and upload images.
-*   **Order Management**: Accept incoming orders with a single tap. Update status to "Preparing" and "Ready" to notify users.
-*   **Store Timings**: Easily manage opening and closing hours directly from the app.
+- **Business Dashboard** — Daily stats: Pending Orders, In-Progress, Revenue, Completed
+- **Menu Control** — Add, Edit, Delete items with image upload, categories, and pricing
+- **Live Order Management** — Accept orders, update to Preparing/Ready with one tap
+- **Store Timings** — Manage opening/closing hours
+
+### 🛵 For Delivery Riders
+A **dedicated companion app** (`rider_app/`) with its own onboarding and workflow:
+- **Multi-Stage Onboarding** — 6-step KYC & verification flow:
+  1. Basic Profile
+  2. KYC Documents
+  3. Identity Verification
+  4. Training Module
+  5. Agreement Signing
+  6. Success / Activation
+- **Home Dashboard** — View and accept available delivery orders
+- **Order Detail Screen** — Navigate, complete, or report delivery issues
+- **Delivery History** — Track all completed and past deliveries
+- **Profile Management** — Manage rider profile with document uploads
 
 ### 🛡️ For Admins
-*   **Quality Control**: Review new canteen registration requests.
-*   **Approval System**: Approve valid canteens to go live or reject invalid ones.
-*   **Revocation**: Maintain platform quality by removing canteens that violate policies.
-
----
-
-## 📱 App Flow & Screenshots
-
-1.  **Onboarding**: Users sign up and choose their role (User or Canteen Owner).
-2.  **Home Screen**: Users see a list of approved canteens. Owners see their dashboard.
-3.  **Ordering**: Users select a canteen -> Add items -> Pay via Razorpay.
-4.  **Fulfillment**: Owner receives order -> Starts preparing -> Marks as Ready.
-5.  **Pickup**: User shows the **Token Number** to the canteen owner to collect food.
+- **Canteen Approval** — Review and approve/reject new canteen registrations
+- **Revocation** — Remove canteens that violate platform policies
+- **Admin Web Portal** — Separate web-based admin panel (`admin-portal/`)
 
 ---
 
 ## 🛠️ Technical Architecture
 
-Krave is built with a robust tech stack ensuring scalability and performance:
+### Frontend
+| App | Framework | State Management |
+|-----|-----------|-----------------|
+| Main App | Flutter (Dart) | Provider |
+| Rider App | Flutter (Dart) | Provider |
+| Admin Portal | Web | — |
 
-*   **Frontend Framework**: [Flutter](https://flutter.dev/) (Dart) - For cross-platform native performance.
-*   **Backend & Database**: [Firebase](https://firebase.google.com/)
-    *   **Firestore**: Real-time NoSQL database for syncing orders and menus.
-    *   **Firebase Auth**: Secure user authentication.
-    *   **Cloud Functions**: Serverless backend logic (optional/future).
-*   **State Management**: [Provider](https://pub.dev/packages/provider) - For efficient state handling.
-*   **Payment Gateway**: [Razorpay](https://razorpay.com/) - For handling payments.
-*   **UI Design**: Custom **Glassmorphism** aesthetic, **Shimmer** loading effects, and **Google Fonts** (Outfit).
+### Backend (Serverless Firebase)
+| Service | Purpose |
+|---------|---------|
+| **Firebase Auth** | User authentication (Email/Password + Google) |
+| **Cloud Firestore** | Real-time NoSQL database |
+| **Firebase Storage** | Image & document uploads |
+| **Firebase Messaging** | Push notifications (FCM) |
+| **Cloud Functions** | Serverless backend (Node.js 22) |
+| **Firebase App Check** | API abuse prevention |
+
+### Third-Party Integrations
+| Integration | Purpose |
+|-------------|---------|
+| **Razorpay** | Payment gateway (order creation + verification) |
+| **Google Sign-In** | OAuth authentication |
+| **Google Fonts (Outfit)** | Typography |
+| **QR Flutter** | QR / Token code generation |
 
 ---
 
-## 🚀 Installation & Setup Guide
+## ☁️ Cloud Functions
 
-Follow these steps to run Krave on your local machine.
+The `functions/` directory contains the serverless backend logic:
+
+| Function | Trigger | Description |
+|----------|---------|-------------|
+| `onOrderCreated` | Firestore trigger | Notifies canteen owner via FCM on new order |
+| `onOrderStatusUpdate` | Firestore trigger | Notifies user when order status changes |
+| `onOwnerCreated` | Firestore trigger | Alerts admins when a new canteen owner registers |
+| `onOwnerDelete` | Firestore trigger | Cleans up Auth users on owner document deletion |
+| `createRazorpayOrder` | HTTPS Callable | Securely creates a Razorpay payment order |
+| `confirmRazorpayPayment` | HTTPS Callable | Verifies payment signature and finalizes transaction |
+
+---
+
+## 📂 Main App — Directory Structure (`lib/`)
+
+```
+lib/
+├── main.dart
+└── src/
+    ├── config.dart
+    ├── models/
+    │   ├── user_model.dart
+    │   ├── order_model.dart
+    │   ├── canteen_model.dart
+    │   └── food_item_model.dart
+    ├── services/
+    │   ├── auth_service.dart          # Firebase Auth wrapper
+    │   ├── firestore_service.dart     # Core Firestore CRUD
+    │   ├── cart_provider.dart         # Shopping cart state
+    │   ├── user_provider.dart         # User profile state
+    │   ├── payment_service.dart       # Razorpay payment logic
+    │   ├── storage_service.dart       # Firebase Storage uploads
+    │   ├── notification_service.dart  # FCM + local notifications
+    │   ├── functions_service.dart     # Cloud Functions callable
+    │   ├── pdf_invoice_service.dart   # PDF invoice generation
+    │   ├── pdf_service.dart           # Generic PDF utilities
+    │   ├── image_search_service.dart  # Image search/fetch
+    │   └── watchdog_service.dart      # Background health checks
+    ├── screens/
+    │   ├── auth/                      # Login & Signup
+    │   ├── user/                      # Student screens
+    │   │   ├── user_home.dart
+    │   │   ├── canteen_menu.dart
+    │   │   ├── cart_screen.dart
+    │   │   ├── order_tracking.dart
+    │   │   ├── order_history.dart
+    │   │   ├── profile_screen.dart
+    │   │   ├── account_settings.dart
+    │   │   ├── transfer_money_screen.dart
+    │   │   └── help_support.dart
+    │   ├── owner/                     # Canteen owner screens
+    │   └── admin/                     # Admin screens
+    └── widgets/                       # Reusable UI components
+```
+
+---
+
+## 🛵 Rider App — Directory Structure (`rider_app/`)
+
+```
+rider_app/
+└── lib/
+    ├── main.dart
+    └── src/
+        ├── models/
+        ├── providers/
+        ├── services/
+        ├── theme/
+        ├── widgets/
+        └── screens/
+            ├── login_screen.dart
+            ├── home_screen.dart
+            ├── order_detail_screen.dart
+            ├── history_screen.dart
+            ├── profile_screen.dart
+            └── onboarding/
+                ├── stage1_basic_profile_screen.dart
+                ├── stage2_kyc_screen.dart
+                ├── stage3_verification_screen.dart
+                ├── stage4_training_screen.dart
+                ├── stage5_agreement_screen.dart
+                └── stage6_success_screen.dart
+```
+
+> The Rider App depends on `krave` as a local path package to share models and Firebase config.
+
+---
+
+## 🚀 Installation & Setup
 
 ### Prerequisites
-1.  **Flutter SDK**: Ensure you have Flutter installed (`flutter doctor`).
-2.  **Dart SDK**: Included with Flutter.
-3.  **Firebase Account**: You need a Firebase project.
+- **Flutter SDK** `>=3.9.2 <4.0.0` — verify with `flutter doctor`
+- **Node.js** `>=18` — for Cloud Functions
+- **Firebase CLI** — `npm install -g firebase-tools`
+- **Firebase Account** with a configured project
 
-### Step 1: Clone the Repository
+### 1. Clone the Repository
 ```bash
 git clone https://github.com/yourusername/krave.git
 cd krave
 ```
 
-### Step 2: Install Dependencies
+### 2. Install Dependencies
+
+**Main App:**
 ```bash
 flutter pub get
 ```
 
-### Step 3: Firebase Configuration
-1.  Go to the [Firebase Console](https://console.firebase.google.com/).
-2.  Create a new project.
-3.  **Enable Authentication**: Go to Build -> Authentication -> Sign-in method -> Enable **Email/Password**.
-4.  **Create Database**: Go to Build -> Firestore Database -> Create Database.
-    *   Start in **Test Mode** for development.
-5.  **Add App**: Register an Android/iOS app in Firebase settings.
-6.  **Download Config**:
-    *   For Android: Download `google-services.json` and place it in `android/app/`.
-    *   For iOS: Download `GoogleService-Info.plist` and place it in `ios/Runner/`.
+**Rider App:**
+```bash
+cd rider_app && flutter pub get
+```
 
-### Step 4: Run the App
-Connect your device or start an emulator, then run:
+**Cloud Functions:**
+```bash
+cd functions && npm install
+```
+
+### 3. Firebase Configuration
+
+1. Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com/)
+2. Enable **Authentication** → Email/Password + Google
+3. Create **Firestore Database** (Test Mode for dev)
+4. Enable **Firebase Storage**
+5. Enable **Firebase Cloud Messaging**
+6. Register your Android/iOS apps and download config files:
+   - Android: `google-services.json` → `android/app/`
+   - iOS: `GoogleService-Info.plist` → `ios/Runner/`
+
+### 4. Environment Variables
+
+Create a `.env` file at the root (already gitignored):
+```env
+RAZORPAY_KEY_ID=your_key_id
+RAZORPAY_KEY_SECRET=your_key_secret
+```
+
+### 5. Deploy Cloud Functions
+```bash
+firebase deploy --only functions
+```
+
+### 6. Run the Apps
+
+**Main App:**
 ```bash
 flutter run
 ```
 
+**Rider App:**
+```bash
+cd rider_app && flutter run
+```
+
 ---
 
-## � Project Structure Explained
+## 📦 Key Dependencies
 
-Here is a quick guide to the codebase to help you navigate:
+### Main App
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `firebase_core` | ^3.0.0 | Firebase initialization |
+| `firebase_auth` | ^5.0.0 | Authentication |
+| `cloud_firestore` | ^5.0.0 | Real-time database |
+| `firebase_storage` | ^12.0.0 | File/image storage |
+| `firebase_messaging` | ^15.0.0 | Push notifications |
+| `cloud_functions` | ^5.0.0 | Serverless backend calls |
+| `firebase_app_check` | ^0.3.2 | API abuse prevention |
+| `provider` | ^6.0.5 | State management |
+| `razorpay_flutter` | ^1.3.6 | Payment gateway |
+| `google_sign_in` | ^6.2.1 | Google OAuth |
+| `qr_flutter` | ^4.1.0 | Token QR code generation |
+| `pdf` / `printing` | ^3.10 / ^5.13 | PDF invoice generation |
+| `flutter_animate` | ^4.5.0 | Animations |
+| `shimmer` | ^3.0.0 | Loading skeletons |
+| `google_fonts` | ^6.2.1 | Outfit typography |
+| `cached_network_image` | ^3.3.0 | Image caching |
+| `geolocator` | ^13.0.1 | Location services |
+| `image_picker` | ^1.1.2 | Camera/gallery upload |
+| `file_picker` | ^8.1.4 | Document uploads |
 
-*   **`lib/main.dart`**: The entry point of the application. Sets up themes and providers.
-*   **`lib/src/models/`**: Data classes (POJOs) defining the structure of `User`, `Canteen`, `Order`, and `MenuItem`.
-*   **`lib/src/screens/`**:
-    *   **`auth/`**: Login and Signup screens.
-    *   **`user/`**: Screens for the customer app (Home, Menu, Cart, Order History).
-    *   **`owner/`**: Screens for the canteen manager (Dashboard, Manage Menu, Live Orders).
-    *   **`admin/`**: Screens for the super admin (Approve/Revoke Canteens).
-*   **`lib/src/services/`**:
-    *   **`auth_service.dart`**: Handles Login, Signup, and Logout.
-    *   **`firestore_service.dart`**: The core data layer. Handles all database CRUD operations.
-    *   **`cart_provider.dart`**: Manages the shopping cart state locally.
-*   **`lib/src/widgets/`**: Reusable UI components like `RestaurantCard`, `GlassContainer`, and `GradientBackground`.
+### Rider App (additional)
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `pinput` | ^6.0.2 | OTP/PIN input UI |
+| `lottie` | ^3.3.2 | Lottie animations |
+| `shared_preferences` | ^2.3.2 | Local persistent storage |
+
+---
+
+## 🔮 Roadmap
+
+- [x] Core ordering flow (User → Owner)
+- [x] Razorpay payment integration
+- [x] Real-time order tracking
+- [x] PDF invoice generation
+- [x] Rider App with KYC onboarding
+- [x] Google Sign-In
+- [x] QR token system
+- [ ] Push Notifications for all roles
+- [ ] Rating & Review system
+- [ ] Krave Wallet (internal balance)
+- [ ] Dark / Light mode toggle
+- [ ] Rider GPS live tracking
+- [ ] Canteen analytics dashboard
 
 ---
 
 ## ❓ Troubleshooting
 
-*   **Build Errors?**
-    *   Run `flutter clean` and then `flutter pub get`.
-    *   Ensure your Kotlin version in `android/build.gradle` matches the Flutter requirements.
-*   **Firebase Errors?**
-    *   Double-check that `google-services.json` is in the correct folder.
-    *   Ensure your Firestore Security Rules allow read/write for development.
+| Issue | Solution |
+|-------|---------|
+| Build errors | Run `flutter clean && flutter pub get` |
+| Firebase errors | Ensure `google-services.json` / `GoogleService-Info.plist` are in place |
+| Kotlin version mismatch | Update `android/build.gradle` Kotlin version |
+| Functions deployment fails | Verify Node.js version and `firebase login` status |
+| Razorpay errors | Confirm `.env` keys and ensure test/live mode matches |
 
 ---
 
-## 🔮 Future Roadmap
+## 📄 License
 
-*   [ ] Push Notifications for order updates.
-*   [ ] Rating and Review system for canteens.
-*   [ ] Wallet system for quicker payments.
-*   [ ] Dark/Light mode toggle.
+Private & Proprietary — All Rights Reserved.
 
 ---
 

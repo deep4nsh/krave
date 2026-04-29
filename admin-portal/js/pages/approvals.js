@@ -1,4 +1,10 @@
+import { db } from '../firebase-config.js';
+import { 
+  collection, query, where, onSnapshot, doc, 
+  getDoc, addDoc, updateDoc, serverTimestamp, deleteDoc 
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { COLLECTIONS, VENUE_TYPE } from '../constants.js';
+import { registerListener, showToast, formatDateShort, showConfirmModal } from '../utils.js';
 
 export async function loadApprovals() {
   const main = document.getElementById('main-content');

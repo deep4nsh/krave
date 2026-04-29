@@ -29,6 +29,13 @@ class FirestoreService {
     });
   }
 
+  Future<void> updateUserProfile(String uid, Map<String, dynamic> data) async {
+    await _db.collection('Users').doc(uid).update({
+      ...data,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
   Future<void> createUser(KraveUser user) async {
     await _db.collection('Users').doc(user.id).set(user.toMap());
   }

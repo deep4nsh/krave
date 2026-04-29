@@ -90,8 +90,14 @@ service cloud.firestore {
     
     // Orders collection
     match /Orders/{orderId} {
-      // Admins and Riders can list orders.
-      allow list: if isAdmin() || isRider();
+      // Admins and Riders can list all orders. 
+      // Regular users can list their own orders. Owners can list their canteen's orders.
+      allow list: if isAdmin() || isRider() || (
+        isAuthenticated() && (
+          resource.data.userId == request.auth.uid ||
+          isOwner(resource.data.canteenId)
+        )
+      );
       allow get: if isAuthenticated() && 
                     (request.auth.uid == resource.data.userId || 
                      isAdmin() || 

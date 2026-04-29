@@ -3,14 +3,21 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../services/auth_service.dart';
 import '../../services/user_provider.dart';
+import '../../services/firestore_service.dart';
+import '../../services/storage_service.dart';
 import '../../widgets/gradient_background.dart';
 import '../../widgets/glass_container.dart';
 import '../../theme/app_colors.dart';
 import '../auth/login_screen.dart';
 import 'transfer_money_screen.dart';
 import 'order_history.dart';
+import 'account_settings.dart';
+import 'help_support.dart';
+import 'dart:io';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -39,6 +46,49 @@ class ProfileScreen extends StatelessWidget {
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Logout failed: $e')));
+    }
+  }
+
+  Future<void> _pickAndUploadImage(BuildContext context) async {
+    final picker = ImagePicker();
+    final user = context.read<UserProvider>().user;
+    if (user == null) return;
+
+    try {
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 70, // Built-in compression
+      );
+
+      if (image == null) return;
+
+      HapticFeedback.mediumImpact();
+      
+      // I would normally show a loading overlay here if it were a stateful widget, 
+      // but since this is a stateless widget, I'll use the scaffold messenger to show progress.
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Uploading profile picture...'), duration: Duration(seconds: 2)),
+      );
+
+      final storage = context.read<StorageService>();
+      final firestore = context.read<FirestoreService>();
+      
+      final downloadUrl = await storage.uploadProfilePic(user.id, File(image.path));
+      
+      if (downloadUrl != null) {
+        await firestore.updateUserProfile(user.id, {'profilePic': downloadUrl});
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Profile picture updated!')),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Upload failed: $e')),
+        );
+      }
     }
   }
 
@@ -72,7 +122,7 @@ class ProfileScreen extends StatelessWidget {
                 icon: Icons.person_outline_rounded,
                 title: 'Account Settings',
                 subtitle: 'Manage your profile and security',
-                onTap: () => _showComingSoon(context, 'Account Settings'),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AccountSettingsScreen())),
               ),
               _buildProfileOption(
                 context,
@@ -89,7 +139,7 @@ class ProfileScreen extends StatelessWidget {
                 icon: Icons.help_outline_rounded,
                 title: 'Help & Support',
                 subtitle: 'Get assistance and FAQs',
-                onTap: () => _showComingSoon(context, 'Help & Support'),
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpSupportScreen())),
               ),
               const SizedBox(height: 32),
               
@@ -175,20 +225,47 @@ class ProfileScreen extends StatelessWidget {
   }
 
   Widget _buildProfileHeader(BuildContext context, String email) {
+    final user = context.read<UserProvider>().user;
+    final photoUrl = user?.profilePic;
+
     return Column(
       children: [
-        Container(
-          width: 90,
-          height: 90,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(colors: [AppColors.primary, AppColors.primary.withOpacity(0.5)]),
-            boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.2), blurRadius: 20)],
-          ),
-          child: const Icon(Icons.person_rounded, size: 40, color: Colors.black),
+        Stack(
+          children: [
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(colors: [AppColors.primary, AppColors.primary.withOpacity(0.5)]),
+                boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.2), blurRadius: 20)],
+                image: photoUrl != null 
+                  ? DecorationImage(image: CachedNetworkImageProvider(photoUrl), fit: BoxFit.cover)
+                  : null,
+              ),
+              child: photoUrl == null 
+                ? const Icon(Icons.person_rounded, size: 48, color: Colors.black)
+                : null,
+            ),
+            Positioned(
+              bottom: 0,
+              right: 0,
+              child: GestureDetector(
+                onTap: () => _pickAndUploadImage(context),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.camera_alt_rounded, size: 16, color: Colors.black),
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 16),
-        Text(email.split('@')[0].toUpperCase(), style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold)),
+        Text(user?.name.toUpperCase() ?? email.split('@')[0].toUpperCase(), style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold)),
         Text(email, style: const TextStyle(color: Colors.white38, fontSize: 13)),
       ],
     );
